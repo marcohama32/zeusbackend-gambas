@@ -31,7 +31,23 @@ exports.allUsers = async (req, res, next) => {
 //show single user
 exports.singleUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findById(req.params.id).populate("plan").populate("user");
+    if (user.avatar) {
+      // Construct the full URL for the avatar image
+      user.avatar = `${user.avatar}`; // Replace 'your-image-url' with the actual URL or path to your images
+    }
+    
+    if (user.multipleFiles) {
+      // Fetch the array of files
+      const files = user.multipleFiles.split(',');
+
+      // Construct the full URLs for the files
+      const fileURLs = files.map(file => `${file}`);
+
+      // Update the user object with the array of file URLs
+      user.multipleFiles = fileURLs;
+    }
+
     res.status(200).json({
       success: true,
       user,
@@ -40,6 +56,7 @@ exports.singleUser = async (req, res, next) => {
     return next(error);
   }
 };
+
 
 //edit user
 exports.editUser = async (req, res, next) => {

@@ -1,5 +1,6 @@
 const Company = require("../models/companyModel");
 const Plan = require("../models/planModel");
+const User = require("../models/userModel");
 const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/asyncHandler");
 
@@ -136,7 +137,7 @@ exports.getAllCompany = async (req, res, next) => {
 
   try {
     const company = await Company.find()
-      .populate("plan")
+      .populate("plans")
       .populate("user")
       .sort({ createdAt: -1 })
       .skip(pageSize * (page - 1))
@@ -165,6 +166,26 @@ exports.deleteCompany = asyncHandler(async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Company deleted successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+//quero entrar na tabela de usuarios, e estrair todos os usuarios que tem o id da empresa
+//irei receber esse id por parametro
+
+exports.getThisCompanyUsers = asyncHandler(async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const allUsers = await User.find({ company: id })
+  .populate({ path: "plan", select: "-__v" })
+  .populate({ path: "user", select: "firstName lastName email" });
+
+    res.status(200).json({
+      success: true,
+      allUsers,
     });
   } catch (error) {
     next(error);

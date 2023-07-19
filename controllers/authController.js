@@ -74,7 +74,7 @@ exports.signup = async (req, res, next) => {
       company,
       plan,
       password,
-      user: req.user.id,
+      // user: req.user.id,
     });
 
     res.status(201).json({
@@ -142,6 +142,7 @@ exports.logout = (req, res, next) => {
 
 //user profile
 exports.userProfile = async (req, res, next) => {
+  console.log("Received headers:", req.headers);
   const user = await User.findById(req.user.id).select("-password");
 
   res.status(200).json({

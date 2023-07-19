@@ -3,33 +3,9 @@ const { ObjectId } = mongoose.Schema;
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-const jobsHistorySchema = new mongoose.Schema(
+const myMembersSchema = new mongoose.Schema(
   {
-    title: {
-      type: String,
-      trim: true,
-      maxlength: 70,
-    },
-    description: {
-      type: String,
-      trim: true,
-    },
-    salary: {
-      type: String,
-      trim: true,
-    },
-    location: {
-      type: String,
-    },
-    interviwDate: {
-      type: Date,
-    },
-    applicationStatus: {
-      type: String,
-      enum: ["pending", "accepted", "rejected"],
-      default: "pending",
-    },
-    user: {
+    member: {
       type: ObjectId,
       ref: "User",
       required: true,
@@ -66,15 +42,19 @@ const userSchema = new mongoose.Schema(
     gender: {
       type: String,
       required: [true, "Gender is required"],
-      enum: ["male", "femele", "other"],
+      enum: ["male", "female", "other"],
     },
     dob: {
       type: Date,
     },
+    EnrolmentDate: {
+      type: Date,
+    },
 
     relation: {
-      type: Number,
+      type: String,
       required: false,
+      enum: ["Main", "Wife", "Son","Daughter","Mother","Father"],
     },
 
     monthlyFee: {
@@ -83,6 +63,7 @@ const userSchema = new mongoose.Schema(
     },
     memberShipID: {
       type: String,
+      unique: true,
       required: [false, "MemberShipID is required"],
     },
     idType: {
@@ -100,11 +81,15 @@ const userSchema = new mongoose.Schema(
     },
     contact1: {
       type: String,
-      required: [true, "Contact is required"],
+      required: function () {
+        return this.isNew; // Make it required only when creating a new document
+      },
     },
     contact2: {
       type: String,
+      required: false,
     },
+    
     partnerLocation: {
       type: String,
       required: false,
@@ -119,16 +104,16 @@ const userSchema = new mongoose.Schema(
       ref: "Company",
       required: false,
     },
-    plan: {
+    plan: [{
       type: ObjectId,
       ref: "Plan",
-      required: false,
-    },
+      required: false
+    }],
 
     user: {
       type: ObjectId,
       ref: "User",
-      required: true,
+      required: false,
     },
 
     password: {
@@ -139,10 +124,24 @@ const userSchema = new mongoose.Schema(
       default: "mediplus",
       // minlength: [6, "passwprd must have at least (6) caracters"],
     },
-    // jobsHistory: [jobsHistorySchema],
+    balancePlan: {
+      type: String,
+      default: "0",
+    },
+    multipleFiles: {
+      type: String,
+    },
+    avatar: {
+      type: String
+    },
+    myMembers: [myMembersSchema],
     role: {
       type: Number,
       default: 0,
+    },
+    status: {
+      type: String,
+      default: "Active",
     },
   },
   { timestamps: true }

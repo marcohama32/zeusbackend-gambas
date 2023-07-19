@@ -17,21 +17,17 @@ const companySchema = new mongoose.Schema(
       trim: true,
       required: [true, "Account Manager is required"],
     },
-    contact1: {
+    contacts: [{
         type: String,
         trim: true,
         required: [true, "Contact is required"],
-      },
-      contact2: {
-        type: String,
-        trim: true,
-        required: ["Partner Business is required"],
-      },
-    plan: {
+      }],
+      
+    plans: [{
       type: ObjectId,
       ref: "Plan",
       required: true,
-    },
+    }],
     user: {
         type: ObjectId,
         ref: "User",

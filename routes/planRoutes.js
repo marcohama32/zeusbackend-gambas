@@ -7,7 +7,7 @@ const { isAuthenticated, isAdmin } = require("../middleware/auth");
 // api/route
 router.get("/allplans", getAllPlan);
 router.put("/plan/update/:plan_id",isAuthenticated, isAdmin, updatePlan); 
-router.get("/plan/:id", isAuthenticated, singlePlan);
+router.get("/plan/:id", singlePlan);
 router.delete("/plan/delete/:id", isAuthenticated, isAdmin, deletePlan);
 router.post("/plan/create", isAuthenticated, isAdmin, createPlan);
 
