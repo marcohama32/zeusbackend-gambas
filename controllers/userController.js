@@ -31,18 +31,27 @@ exports.allUsers = async (req, res, next) => {
 //show single user
 exports.singleUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id).populate("plan").populate("user");
+    const user = await User.findById(req.params.id).
+
+    populate({
+      path: "plan",
+      select: "planName planPrice planDescription",
+    }).
+    populate({
+      path: "user",
+      select: "firstName lastName email",
+    });
     if (user.avatar) {
       // Construct the full URL for the avatar image
       user.avatar = `${user.avatar}`; // Replace 'your-image-url' with the actual URL or path to your images
     }
-    
+
     if (user.multipleFiles) {
       // Fetch the array of files
-      const files = user.multipleFiles.split(',');
+      const files = user.multipleFiles.split(",");
 
       // Construct the full URLs for the files
-      const fileURLs = files.map(file => `${file}`);
+      const fileURLs = files.map((file) => `${file}`);
 
       // Update the user object with the array of file URLs
       user.multipleFiles = fileURLs;
@@ -56,7 +65,6 @@ exports.singleUser = async (req, res, next) => {
     return next(error);
   }
 };
-
 
 //edit user
 exports.editUser = async (req, res, next) => {
@@ -100,14 +108,14 @@ exports.createUserJobsHistory = async (req, res, next) => {
         description,
         salary,
         location,
-        user: req.user._id
+        user: req.user._id,
       };
-      currentUser.jobsHistory.push(addJobHistory)
-      await currentUser.save()
+      currentUser.jobsHistory.push(addJobHistory);
+      await currentUser.save();
     }
     res.status(200).json({
       success: true,
-      currentUser
+      currentUser,
     });
   } catch (error) {
     return next(error);

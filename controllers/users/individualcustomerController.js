@@ -37,29 +37,36 @@ exports.uploadMultipleFiles = async (req, res, next) => {
     const id = req.params.id;
     const existingUser = await User.findById(id);
 
-    if (req.files) {
-      const newFiles = req.files.map((file) => file.path);
-      const multipleFiles = [...existingUser.multipleFiles, ...newFiles]; // Combine the existing files with the new files
-
-      // Updating the user document with the updated multipleFiles
-      const fileUpload = await User.findByIdAndUpdate(
-        id,
-        { multipleFiles },
-        { new: true }
-      );
-
-      res.status(200).json({
-        success: true,
-        message: "Files uploaded successfully",
-        multipleFiles: fileUpload.multipleFiles,
-        file: fileUpload,
-      });
-    } else {
+    if (!req.files || req.files.length === 0) {
       res.status(400).json({
         success: false,
         error: "No files were uploaded",
       });
+      return;
     }
+
+    const newFiles = req.files.map((file) => file.path.replace(/\\/g, "/"));
+
+    let multipleFiles = existingUser.multipleFiles || ""; // Set default value as empty string if multipleFiles is undefined or null
+
+    if (multipleFiles) {
+      multipleFiles += ",";
+    }
+
+    multipleFiles += newFiles.join(",");
+
+    const fileUpload = await User.findByIdAndUpdate(
+      id,
+      { multipleFiles },
+      { new: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Files uploaded successfully",
+      multipleFiles: fileUpload.multipleFiles,
+      file: fileUpload,
+    });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -67,7 +74,6 @@ exports.uploadMultipleFiles = async (req, res, next) => {
     });
   }
 };
-
 
 
 //create IndividualCustomer
@@ -82,11 +88,13 @@ exports.createIndividualUser = asyncHandler(async (req, res, next) => {
       contact2,
       email,
       enrolmentDate,
+      memberShipID,
       firstName,
       gender,
       lastName,
       monthlyFee,
       plan,
+      password,
     } = req.body;
 
     const requiredFields = [
@@ -98,6 +106,7 @@ exports.createIndividualUser = asyncHandler(async (req, res, next) => {
       contact2,
       email,
       enrolmentDate,
+      memberShipID,
       firstName,
       gender,
       lastName,
@@ -105,15 +114,13 @@ exports.createIndividualUser = asyncHandler(async (req, res, next) => {
       plan,
     ];
 
-  
-
     if (requiredFields.some((field) => !field)) {
       return next(new ErrorResponse("Fields cannot be null", 400));
     }
-      // Check if contact is a valid number
-  if (isNaN(contact1) || isNaN(contact2) || isNaN(monthlyFee)) {
-    return next(new ErrorResponse("Validate all fields", 400));
-  }
+    // Check if contact is a valid number
+    if (isNaN(contact1) || isNaN(contact2) || isNaN(monthlyFee)) {
+      return next(new ErrorResponse("Validate all fields", 400));
+    }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -138,6 +145,7 @@ exports.createIndividualUser = asyncHandler(async (req, res, next) => {
       contact2,
       email,
       enrolmentDate,
+      memberShipID,
       firstName,
       gender,
       lastName,
@@ -147,6 +155,7 @@ exports.createIndividualUser = asyncHandler(async (req, res, next) => {
       role: 5,
       avatar,
       userType: 5,
+      password,
       user: req.user.id,
     });
 
@@ -173,6 +182,7 @@ exports.editIndividualUser = asyncHandler(async (req, res, next) => {
     contact2,
     email,
     enrolmentDate,
+    memberShipID,
     firstName,
     gender,
     lastName,
@@ -190,6 +200,7 @@ exports.editIndividualUser = asyncHandler(async (req, res, next) => {
     contact2,
     email,
     enrolmentDate,
+    memberShipID,
     firstName,
     gender,
     lastName,
@@ -223,6 +234,7 @@ exports.editIndividualUser = asyncHandler(async (req, res, next) => {
       contact2,
       email,
       enrolmentDate,
+      memberShipID,
       firstName,
       gender,
       lastName,
@@ -281,7 +293,10 @@ exports.getAllIndividualCustomer = async (req, res, next) => {
       .sort({ createdAt: -1 })
       .select("-password")
       .populate("plan")
-      .populate("user")
+      .populate({
+        path: "user",
+        select: "-password",
+      })
       .skip(pageSize * (page - 1))
       .limit(pageSize);
 
@@ -302,7 +317,7 @@ const path = require("path");
 
 exports.deleteFile = async (req, res, next) => {
   try {
-    const { userId } = req.body; 
+    const { userId } = req.body;
     const fileName = req.body.file; // Assuming the file name is passed in the request body
 
     // Check if the user ID and file name are provided
