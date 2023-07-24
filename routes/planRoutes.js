@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { createPlan, singlePlan,getAllPlan, updatePlan, deletePlan } = require("../controllers/planController");
+const { createPlan, singlePlan,getAllPlan, updatePlan, deletePlan, createService } = require("../controllers/planController");
 const { isAuthenticated, isAdmin } = require("../middleware/auth");
 
 //@auth routes
@@ -11,4 +11,5 @@ router.get("/plan/:id", singlePlan);
 router.delete("/plan/delete/:id", isAuthenticated, isAdmin, deletePlan);
 router.post("/plan/create", isAuthenticated, isAdmin, createPlan);
 
+router.post("/plan/service/create", isAuthenticated, isAdmin, createService);
 module.exports = router;

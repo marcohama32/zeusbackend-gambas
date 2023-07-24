@@ -14,7 +14,7 @@ const serviceSchema = new mongoose.Schema(
       required: true,
     },
     servicePrice: {
-      type: String,
+      type: Number,
       trim: true,
       required: [true, "Service Price is required"],
     },

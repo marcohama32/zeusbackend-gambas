@@ -1,20 +1,24 @@
 const mongoose = require("mongoose");
+const { startSession } = require("mongoose");
 const { ObjectId } = mongoose.Schema;
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-const myMembersSchema = new mongoose.Schema(
-  {
-    member: {
-      type: ObjectId,
-      ref: "User",
-      required: true,
-    },
+const serviceBalanceSchema = new mongoose.Schema({
+  service: {
+    type: ObjectId,
+    ref: "PlanService",
+    required: true,
   },
-  { timestamps: true }
-);
+  balance: {
+    type: Number,
+    default: 0,
+  },
+});
+
 
 const userSchema = new mongoose.Schema(
+  
   {
     firstName: {
       type: String,
@@ -47,14 +51,14 @@ const userSchema = new mongoose.Schema(
     dob: {
       type: Date,
     },
-    EnrolmentDate: {
+    enrolmentDate: {
       type: Date,
     },
 
     relation: {
       type: String,
       required: false,
-      enum: ["Main", "Wife", "Son","Daughter","Mother","Father"],
+      enum: ["Main", "Wife", "Son", "Daughter", "Mother", "Father"],
     },
 
     monthlyFee: {
@@ -64,7 +68,6 @@ const userSchema = new mongoose.Schema(
     memberShipID: {
       type: String,
       unique: true,
-      required: [false, "MemberShipID is required"],
     },
     idType: {
       type: String,
@@ -89,7 +92,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
-    
+    profile: {
+      type: String,
+      required: false,
+    },
     partnerLocation: {
       type: String,
       required: false,
@@ -104,11 +110,13 @@ const userSchema = new mongoose.Schema(
       ref: "Company",
       required: false,
     },
-    plan: [{
-      type: ObjectId,
-      ref: "Plan",
-      required: false
-    }],
+    plan: [
+      {
+        type: ObjectId,
+        ref: "Plan",
+        required: false,
+      },
+    ],
 
     user: {
       type: ObjectId,
@@ -116,11 +124,22 @@ const userSchema = new mongoose.Schema(
       required: false,
     },
 
+    partnerUser: {
+      type: ObjectId,
+      ref: "Partner",
+      required: false,
+    },
+    companyUser: {
+      type: ObjectId,
+      ref: "Company",
+      required: false,
+    },
+
     password: {
       type: String,
       trim: true,
       // required: [true, "password name is required"],
-      
+
       default: "mediplus",
       // minlength: [6, "passwprd must have at least (6) caracters"],
     },
@@ -132,12 +151,30 @@ const userSchema = new mongoose.Schema(
       type: String,
     },
     avatar: {
-      type: String
+      type: String,
     },
-    myMembers: [myMembersSchema],
+    myMembers: [
+      {
+        type: ObjectId,
+        ref: "User",
+        required: false,
+      },
+    ],
     role: {
       type: Number,
       default: 0,
+    },
+    availability: {
+      type: String,
+      required: false,
+      enum: ["yes", "no"],
+      default: "yes",
+    },
+    serviceBalances: [serviceBalanceSchema],
+    manager: {
+      type: ObjectId,
+      ref: "User",
+      required: false,
     },
     status: {
       type: String,

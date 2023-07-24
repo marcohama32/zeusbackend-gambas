@@ -3,10 +3,7 @@ const { ObjectId } = mongoose.Schema;
 
 const customertransactionSchema = new mongoose.Schema(
   {
-    // se quem vai gravar e o usuario logado,
-    // entao nao ha necessidade de cadastrar partner,
-    // porque esta la logado, mas vou devicePixelRatio, talvez
-    // eles podem facturar algum valor ao cliente
+
     user: {
       type: ObjectId,
       ref: "User",
@@ -41,14 +38,6 @@ const customertransactionSchema = new mongoose.Schema(
       ref: "Partner",
       required: true,
     },
-    serviceName: { type: String },
-    planName: { type: String },
-    planPrice: { type: String },
-    serviceName: { type: String },
-    servicePrice: { type: String },
-    partnerName: { type: String },
-    amountLeftPlan: { type: String },
-    amountLeftService: { type: String },
   },
   { timestamps: true }
 );

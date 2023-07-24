@@ -4,48 +4,56 @@ const User = require("../models/userModel");
 const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/asyncHandler");
 
-//create service
+//create company
+//create IndividualCustomer
 exports.createCompany = asyncHandler(async (req, res, next) => {
   try {
-    const { companyName, brand, accountManager, contact1, contact2, plan } =
-      req.body;
-
-    if (
-      !companyName ||
-      !plan ||
-      !brand ||
-      !accountManager ||
-      !contact1 ||
-      !contact2
-    ) {
-      return next(new ErrorResponse("Fields cannot be null", 400));
-    }
-
-    // Check if contact is a valid number
-    if (isNaN(contact1) || isNaN(contact2)) {
-      return next(new ErrorResponse("Contact must be a number", 400));
-    }
-
-    // Check if plan exists
-    const existingPlan = await Plan.findById(plan);
-    if (!existingPlan) {
-      return next(new ErrorResponse("Plan doesn't exist, please check", 400));
-    }
-    // Check if serviceName already exists for the given plan
-    const existingCompany = await Company.findOne({ companyName });
-    if (existingCompany) {
-      return next(
-        new ErrorResponse("Service with the same data already exists", 400)
-      );
-    }
-
-    const company = await Company.create({
+    const {
       companyName,
       brand,
       accountManager,
       contact1,
       contact2,
-      plan,
+      email,
+      manager,
+    } = req.body;
+
+    const requiredFields = [
+      companyName,
+      brand,
+      accountManager,
+      manager,
+      contact1,
+      contact2,
+      email,
+    ];
+
+    if (requiredFields.some((field) => !field)) {
+      return next(new ErrorResponse("Fields cannot be null", 400));
+    }
+    // Check if contact is a valid number
+    if (isNaN(contact1) || isNaN(contact2)) {
+      return next(new ErrorResponse("Validate all fields", 400));
+    }
+
+    const existingCompany = await Company.findOne({ companyName });
+    if (existingCompany) {
+      return next(
+        new ErrorResponse("Company with the same data already exists", 400)
+      );
+    }
+
+    const avatar = req.file?.path;
+
+    const company = await Company.create({
+      companyName,
+      brand,
+      accountManager,
+      manager,
+      contact1,
+      contact2,
+      email,
+      avatar,
       user: req.user.id,
     });
 
@@ -81,28 +89,51 @@ exports.singleCompany = asyncHandler(async (req, res, next) => {
 //update Company
 exports.updatedCompany = asyncHandler(async (req, res, next) => {
   const id = req.params.id;
-  const { companyName, brand, accountManager, contact1, contact2, plan } =
-    req.body;
+  const {
+    companyName,
+    brand,
+    accountManager,
+    contact1,
+    contact2,
+    email,
+    manager,
+    status
+  } = req.body;
   //check if empty
-  if (
-    !companyName ||
-    !plan ||
-    !brand ||
-    !accountManager ||
-    !contact1 ||
-    !contact2
-  ) {
+  const requiredFields = [
+    companyName,
+    brand,
+    accountManager,
+    manager,
+    contact1,
+    contact2,
+    email,
+    status
+  ];
+
+  if (requiredFields.some((field) => !field)) {
     return next(new ErrorResponse("Fields cannot be null", 400));
   }
-
   // Check if contact is a valid number
   if (isNaN(contact1) || isNaN(contact2)) {
-    return next(new ErrorResponse("Contact must be a number", 400));
+    return next(new ErrorResponse("Validate all fields", 400));
   }
+
+  const avatar = req.file?.path;
 
   const updatedCompany = await Company.findByIdAndUpdate(
     id,
-    { companyName, brand, accountManager, contact1, contact2, plan },
+    {
+      companyName,
+      brand,
+      accountManager,
+      contact1,
+      contact2,
+      email,
+      avatar,
+      manager,
+      status
+    },
     { new: true }
   );
 
@@ -116,36 +147,55 @@ exports.updatedCompany = asyncHandler(async (req, res, next) => {
   });
 });
 
-//Get all all job category
+//Get all companies
 exports.getAllCompany = async (req, res, next) => {
-  //enable seach
-  const keyword = req.query.keyword
-    ? {
-        title: {
-          $regex: req.query.keyword,
+  // Enable search
+  const searchTerm = req.query.searchTerm;
+  const accountManagerSearch = req.query.accountManager;
+
+  const keyword = {};
+  if (searchTerm || accountManagerSearch) {
+    keyword["$or"] = [];
+
+    if (searchTerm) {
+      keyword["$or"].push({
+        companyName: {
+          $regex: searchTerm,
           $options: "i",
         },
-      }
-    : {};
+      });
+    }
 
-  //enable pagination
-  const pageSize = 5;
+    if (accountManagerSearch) {
+      keyword["$or"].push({
+        accountManager: {
+          $regex: accountManagerSearch,
+          $options: "i",
+        },
+      });
+    }
+  }
+
+  // Enable pagination
+  const pageSize = 10;
   const page = Number(req.query.pageNumber) || 1;
 
-  // const count = await Job.find({ ...keyword }).estimatedDocumentCount();
-  const count = await Company.find().countDocuments(); //jobType e o nome dentro do modelo job
-
   try {
-    const company = await Company.find()
-      .populate("plans")
-      .populate("user")
+    // Fetch the companies with pagination and population
+    const companies = await Company.find(keyword)
+      .populate("plan")
+      .populate("manager")
       .sort({ createdAt: -1 })
       .skip(pageSize * (page - 1))
       .limit(pageSize);
+
+    // Get the total count of documents with the applied keyword filter
+    const count = await Company.countDocuments(keyword);
+
     res.status(200).json({
       success: true,
       page,
-      company,
+      companies,
       pages: Math.ceil(count / pageSize),
       count,
     });
@@ -180,8 +230,8 @@ exports.getThisCompanyUsers = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
 
     const allUsers = await User.find({ company: id })
-  .populate({ path: "plan", select: "-__v" })
-  .populate({ path: "user", select: "firstName lastName email" });
+      .populate({ path: "plan", select: "-__v" })
+      .populate({ path: "user", select: "firstName lastName email" });
 
     res.status(200).json({
       success: true,

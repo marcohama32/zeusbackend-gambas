@@ -8,6 +8,12 @@ var cors = require("cors");
 const cookieParser = require("cookie-parser");
 const errorHandler = require('./middleware/error');
 
+// Import Socket.IO library
+const http = require("http");
+
+
+app.use(express.json());
+
 app.use(cors());
 //import routes
 const  authRoutes  = require("./routes/authRoutes");
@@ -18,7 +24,8 @@ const planRoutes = require("./routes/planRoutes");
 const serviceRoutes = require("./routes/serviceRoutes")
 const companyRoutes = require("./routes/companyRoutes")
 const partnerRoutes = require("./routes/partnerRoutes")
-const ctransationRoutes = require("./routes/customertransactionRoutes")
+const ctransationRoutes = require("./routes/customertransactionRoutes");
+const chatMessage = require("./routes/chatMessageRoutes");
 
 // Middleware
 app.use(morgan("dev"));
@@ -50,6 +57,12 @@ app.use('/uploads',express.static('uploads'))
 app.use(cookieParser())
 app.use(cors());
 
+// Create HTTP server
+const server = http.createServer(app);
+require("./middleware/socketHandler")(server);
+
+
+
 //Routes middleware
 app.use("/api", authRoutes);
 
@@ -62,6 +75,7 @@ app.use("/api", serviceRoutes)
 app.use("/api", companyRoutes)
 app.use("/api", partnerRoutes)
 app.use("/api", ctransationRoutes)
+app.use("/api", chatMessage)
 
 //error middleware
 app.use(errorHandler)

@@ -92,9 +92,7 @@ exports.signin = async (req, res, next) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return next(
-        new ErrorResponse("Please provide both email and password", 403)
-      );
+      return next(new ErrorResponse("Please provide both email and password", 403));
     }
 
     const user = await User.findOne({ email });
@@ -109,11 +107,16 @@ exports.signin = async (req, res, next) => {
       return next(new ErrorResponse("Invalid credentials", 400));
     }
 
+    if (user.status !== "Active") {
+      return next(new ErrorResponse("User account is not active, contact admin", 401));
+    }
+
     sendTokenResponse(user, 200, res);
   } catch (error) {
     next(error);
   }
 };
+
 
 const sendTokenResponse = async (user, codeStatus, res) => {
   const token = await user.getJwtToken();

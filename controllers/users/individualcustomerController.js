@@ -90,6 +90,7 @@ exports.createIndividualUser = asyncHandler(async (req, res, next) => {
       enrolmentDate,
       memberShipID,
       firstName,
+      manager,
       gender,
       lastName,
       monthlyFee,
@@ -108,6 +109,7 @@ exports.createIndividualUser = asyncHandler(async (req, res, next) => {
       enrolmentDate,
       memberShipID,
       firstName,
+      manager,
       gender,
       lastName,
       monthlyFee,
@@ -128,6 +130,14 @@ exports.createIndividualUser = asyncHandler(async (req, res, next) => {
         new ErrorResponse("User with the same data already exists", 400)
       );
     }
+    const existingUserByMemberShipID = await User.findOne({ memberShipID });
+    if (existingUserByMemberShipID) {
+      return res.status(400).json({
+        success: false,
+        error: "User with the same memberShipID already exists",
+      });
+    }
+
 
     const existingPlan = await Plan.findById(plan);
     if (!existingPlan) {
@@ -149,6 +159,7 @@ exports.createIndividualUser = asyncHandler(async (req, res, next) => {
       firstName,
       gender,
       lastName,
+      manager,
       monthlyFee,
       plan,
       relation: "Main",
@@ -184,12 +195,14 @@ exports.editIndividualUser = asyncHandler(async (req, res, next) => {
     enrolmentDate,
     memberShipID,
     firstName,
+    manager,
     gender,
     lastName,
     monthlyFee,
     plan,
+    status,
+    relation,
   } = req.body;
-  relation = "Main";
 
   const requiredFields = [
     dob,
@@ -202,10 +215,13 @@ exports.editIndividualUser = asyncHandler(async (req, res, next) => {
     enrolmentDate,
     memberShipID,
     firstName,
+    manager,
     gender,
     lastName,
     monthlyFee,
     plan,
+    status,
+    relation
   ];
 
   if (requiredFields.some((field) => !field)) {
@@ -236,14 +252,16 @@ exports.editIndividualUser = asyncHandler(async (req, res, next) => {
       enrolmentDate,
       memberShipID,
       firstName,
+      manager,
       gender,
       lastName,
       monthlyFee,
       plan,
-      relation: "Main",
+      relation,
       role: 5,
       avatar,
       userType: 5,
+      status,
       user: req.user.id,
     },
     { new: true }
@@ -260,15 +278,23 @@ exports.editIndividualUser = asyncHandler(async (req, res, next) => {
 });
 
 exports.getAllIndividualCustomer = async (req, res, next) => {
-  const pageSize = Number(req.query.pageSize) || 10;
-  const page = Number(req.query.pageNumber) || 1;
+  let pageSize = Number(req.query.pageSize) || 10;
+  let page = Number(req.query.pageNumber) || 1;
   const searchTerm = req.query.searchTerm; // Extract searchTerm from query params
+
+  // Validate pageSize and pageNumber
+  if (pageSize <= 0) {
+    return res.status(400).json({ success: false, error: "Invalid pageSize. Must be greater than 0" });
+  }
+
+  if (page <= 0) {
+    return res.status(400).json({ success: false, error: "Invalid pageNumber. Must be greater than 0" });
+  }
 
   try {
     let query = { userType: 5 };
 
     if (searchTerm) {
-      // Modify the query to include search conditions
       query = {
         $and: [
           { userType: 5 },
@@ -276,15 +302,22 @@ exports.getAllIndividualCustomer = async (req, res, next) => {
             $or: [
               { firstName: { $regex: searchTerm, $options: "i" } },
               { lastName: { $regex: searchTerm, $options: "i" } },
-              { enrolmentDate: { $regex: searchTerm, $options: "i" } },
               { idNumber: { $regex: searchTerm, $options: "i" } },
               { contact1: { $regex: searchTerm, $options: "i" } },
               { contact2: { $regex: searchTerm, $options: "i" } },
               { memberShipID: { $regex: searchTerm, $options: "i" } },
+              { relation: { $regex: searchTerm, $options: "i" } },
+              // Add other fields you want to search here
             ],
           },
         ],
       };
+
+      // Check if searchTerm is a valid date and add it to the query
+      const dateSearch = new Date(searchTerm);
+      if (!isNaN(dateSearch)) {
+        query.$and.push({ enrolmentDate: dateSearch });
+      }
     }
 
     const count = await User.countDocuments(query);
@@ -311,6 +344,8 @@ exports.getAllIndividualCustomer = async (req, res, next) => {
     return next(error);
   }
 };
+
+
 
 const fs = require("fs");
 const path = require("path");
