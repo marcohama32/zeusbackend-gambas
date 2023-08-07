@@ -9,6 +9,6 @@ router.get("/allservices", getAllService);
 router.put("/service/update/:id",isAuthenticated, isAdmin, updatedService); 
 router.get("/service/:service_id", isAuthenticated, singleService);
 router.delete("/service/delete/:id", isAuthenticated, isAdmin, deleteService);
-router.post("/service/create", isAuthenticated, isAdmin, createServiceForPlan);
+router.post("/service/createservice", isAuthenticated, isAdmin, createServiceForPlan);
 
 module.exports = router;
