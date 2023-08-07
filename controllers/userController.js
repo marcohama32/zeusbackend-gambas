@@ -2,7 +2,7 @@ const User = require("../models/userModel");
 const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/asyncHandler")
 
-//load all users
+//load all users from db
 exports.allUsers = async (req, res, next) => {
   //enavle pagination
   const pageSize = 20;
@@ -12,8 +12,26 @@ exports.allUsers = async (req, res, next) => {
     const users = await User.find()
       .sort({ createdAt: -1 })
       .select("-password")
-      .populate("plan")
-      .populate("user")
+      .populate({
+        path: "plan",
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+        },
+      })
+      .populate({
+        path: "manager",
+        select: "firstName lastName email",
+        populate: {
+          path: "lineManager",
+          model: "User",
+          select: "firstName lastName email",
+        },
+      })
+      .populate({
+        path: "user",
+        select: "firstName lastName email",
+      }).populate("myMembers")
       .populate("myMembers")
       .skip(pageSize * (page - 1))
       .limit(pageSize);
@@ -30,32 +48,115 @@ exports.allUsers = async (req, res, next) => {
   }
 };
 
+//load customers users from db
+exports.allCustomersUsers = async (req, res, next) => {
+  // Enable pagination
+  const pageSize = 20;
+  const page = Number(req.query.pageNumber) || 1;
+
+  // Enable search
+  const searchTerm = req.query.searchTerm;
+
+  const query = { userType: { $in: [4, 5] } };
+
+  if (searchTerm) {
+    const regex = new RegExp(searchTerm, "i");
+    query["$or"] = [
+      { firstName: regex },
+      { lastName: regex },
+      { email: regex },
+      // Add other fields you want to search by
+    ];
+  }
+
+  try {
+    const count = await User.countDocuments(query);
+    const users = await User.find(query)
+      .sort({ createdAt: -1 })
+      .select("-password")
+      .populate({
+        path: "plan",
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+        },
+      })
+      .populate({
+        path: "manager",
+        select: "firstName lastName email",
+        populate: {
+          path: "lineManager",
+          model: "User",
+          select: "firstName lastName email",
+        },
+      })
+      .populate({
+        path: "user",
+        select: "firstName lastName email",
+      })
+      .populate("myMembers")
+      .skip(pageSize * (page - 1))
+      .limit(pageSize);
+
+    res.status(200).json({
+      success: true,
+      users,
+      page,
+      pages: Math.ceil(count / pageSize),
+      count,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+
 //show single user
 exports.singleUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id).
+    const userId = req.params.id;
 
-    populate({
-      path: "plan",
-      select: "planName planPrice planDescription",
-    }).
-    populate({
-      path: "user",
-      select: "firstName lastName email",
-    }).populate("myMembers");
+    const user = await User.findById(userId)
+      .populate({
+        path: "accountOwner",
+        populate: {
+          path: "manager",
+          select: "firstName lastName email",
+        },
+      })
+      .populate({
+        path: "plan",
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+        },
+      })
+      .populate({
+        path: "manager",
+        select: "firstName lastName email",
+        populate: {
+          path: "lineManager",
+          model: "User",
+          select: "firstName lastName email",
+        },
+      })
+      .populate("user", "firstName lastName email")
+      .populate("myMembers");
+
+    // Check if the user exists
+    if (!user) {
+      return res.status(404).json({ success: false, error: "User not found" });
+    }
+
+    // Construct the full URL for the avatar image
     if (user.avatar) {
-      // Construct the full URL for the avatar image
       user.avatar = `${user.avatar}`; // Replace 'your-image-url' with the actual URL or path to your images
     }
 
+    // Fetch and construct full URLs for the files
     if (user.multipleFiles) {
-      // Fetch the array of files
       const files = user.multipleFiles.split(",");
-
-      // Construct the full URLs for the files
       const fileURLs = files.map((file) => `${file}`);
-
-      // Update the user object with the array of file URLs
       user.multipleFiles = fileURLs;
     }
 
@@ -67,7 +168,6 @@ exports.singleUser = async (req, res, next) => {
     return next(error);
   }
 };
-
 //edit user
 exports.editUser = async (req, res, next) => {
   try {
@@ -191,3 +291,76 @@ if(!validUser) {
     user: InactiveUser.status,
   });
 });
+
+//get user by memberShipID
+exports.UserByMembershipID = (async (req, res, next) => {
+  try {
+    const { memberShipID } = req.query;
+
+    // Validate input
+    if (!memberShipID) {
+      return res.status(400).json({ success: false, error: "Invalid input" });
+    }
+
+    // Find the user by membership ID and select only the specified fields
+    const foundUser = await User.findOne(
+      { memberShipID },
+      "firstName lastName email gender dob relation idType idNumber address contact1 contact2 avatar memberShipID _id status"
+    );
+
+    // Check if the user exists
+    if (!foundUser) {
+      return res.status(404).json({ success: false, error: "User not found" });
+    }
+
+    // Check if the user is inactive
+    if (foundUser.status === "Inactive") {
+      return res.status(400).json({
+        success: false,
+        error: "Customer is Inactive. Please contact admin.",
+      });
+    }
+
+    // Return the selected fields of the user
+    const {
+      firstName,
+      lastName,
+      email,
+      gender,
+      dob,
+      relation,
+      idType,
+      idNumber,
+      address,
+      contact1,
+      contact2,
+      avatar,
+      _id
+      
+    } = foundUser;
+
+    res.status(200).json({
+      success: true,
+      thisuser: {
+        firstName,
+        lastName,
+        email,
+        gender,
+        dob,
+        relation,
+        idType,
+        idNumber,
+        address,
+        contact1,
+        contact2,
+        memberShipID,
+        avatar,
+        _id,
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+

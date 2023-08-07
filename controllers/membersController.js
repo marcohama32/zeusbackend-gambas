@@ -1,7 +1,9 @@
 const User = require("../models/userModel");
 const ErrorResponse = require("../utils/errorResponse");
+const bcrypt = require("bcrypt");
 
 exports.addmembers = async (req, res, next) => {
+  const id = req.params.id;
   const {
     firstName,
     lastName,
@@ -16,7 +18,7 @@ exports.addmembers = async (req, res, next) => {
     contact1,
     contact2,
     userType,
-    plan,
+    plan: planId, // Rename the plan variable to planId to avoid conflict
     password,
   } = req.body;
 
@@ -29,7 +31,9 @@ exports.addmembers = async (req, res, next) => {
     !idNumber ||
     !address ||
     !contact1 ||
-    !userType
+    !userType ||
+    !planId || // Change plan to planId
+    !id
   ) {
     return next(new ErrorResponse("Fields cannot be null", 400));
   }
@@ -41,18 +45,30 @@ exports.addmembers = async (req, res, next) => {
       return next(new ErrorResponse("Email has already been taken", 400));
     }
 
-    let company = null;
-    if (company) {
-      // Check if company field is not empty
-      company = mongoose.Types.ObjectId.isValid(company) ? mongoose.Types.ObjectId(company) : null;
-    }
-    let plan = null;
-    if (plan) {
-      // Check if company field is not empty
-      plan = mongoose.Types.ObjectId.isValid(plan) ? mongoose.Types.ObjectId(plan) : null;
+    // Validate userType to ensure it's one of the valid values (e.g., 4 or 5)
+    if (![4, 5].includes(userType)) {
+      return next(new ErrorResponse("Invalid userType", 400));
     }
 
-    const user = await User.create({
+    // Use the same hashing logic as in the model's pre-save hook
+    
+
+    const company = mongoose.Types.ObjectId.isValid(id)
+      ? mongoose.Types.ObjectId(id)
+      : null;
+
+    const plan = mongoose.Types.ObjectId.isValid(planId)
+      ? mongoose.Types.ObjectId(planId)
+      : null;
+
+      let hashedPassword = password;
+    if (!hashedPassword) {
+      hashedPassword = await bcrypt.hash("mediplus", 10);
+    }
+
+console.log("imprimir",hashedPassword)
+
+    const NewUser = await User.create({
       firstName,
       lastName,
       email,
@@ -66,21 +82,22 @@ exports.addmembers = async (req, res, next) => {
       address,
       contact1,
       contact2,
-      partnerLocation,
       userType,
       company,
       plan,
-      password,
-      // user: req.user.id,
+      password: hashedPassword,
+      user: req.user.id,
+    });
+
+    await User.findByIdAndUpdate(id, {
+      $addToSet: { myMembers: NewUser._id }, // Use $addToSet to add members if not already present
     });
 
     res.status(201).json({
       success: true,
-      user,
+      NewUser,
     });
   } catch (error) {
     next(error);
   }
 };
-
-

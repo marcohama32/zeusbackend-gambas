@@ -6,16 +6,15 @@ const asyncHandler = require("../middleware/asyncHandler");
 
 // Create service and add it to a plan
 exports.createServiceForPlan = asyncHandler(async (req, res, next) => {
+  const {
+    planId,
+    serviceName,
+    servicePrice,
+    serviceDescription,
+    serviceAreaOfCover,
+    preAuthorization,
+  } = req.body;
   try {
-    const {
-      planId,
-      serviceName,
-      servicePrice,
-      serviceDescription,
-      serviceAreaOfCover,
-      preAuthorization,
-    } = req.body;
-
     if (
       !planId ||
       !serviceName ||
@@ -24,39 +23,19 @@ exports.createServiceForPlan = asyncHandler(async (req, res, next) => {
       !serviceAreaOfCover ||
       !preAuthorization
     ) {
-      return res
-        .status(400)
-        .json({ success: false, error: "Fields cannot be null" });
+      return next(new ErrorResponse("Fields cannot be null", 400));
     }
 
     // Check if servicePrice is a valid number
     if (isNaN(servicePrice)) {
-      return res
-        .status(400)
-        .json({ success: false, error: "Service price must be a number" });
+      return next(new ErrorResponse("Service price must be a number", 400));
     }
 
-    // Find the plan to which we want to add the service
-    const plan = await Plan.findById(planId);
+    // Find the plan to which we want to add the service and populate the planService array
+    const plan = await Plan.findById(planId).populate("planService");
 
     if (!plan) {
-      return res
-        .status(404)
-        .json({ success: false, error: "Plan not found" });
-    }
-
-    // Check if a service with the same name already exists in the plan
-    const existingService = plan.planService.find(
-      (service) => service.service.serviceName === serviceName
-    );
-
-    if (existingService) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: "Service with the same name already exists in the plan",
-        });
+      return next(new ErrorResponse("Plan not found", 404));
     }
 
     // Get the user reference from the req.user object
@@ -70,37 +49,29 @@ exports.createServiceForPlan = asyncHandler(async (req, res, next) => {
       serviceAreaOfCover,
       preAuthorization,
       user, // Add the user reference
-      plan: plan._id, // Add the plan reference
     });
 
+    // Ensure that plan.planService is an array or initialize it as an empty array
+    plan.planService = plan.planService || [];
 
+    // Add the new service to the plan's planService array
+    plan.planService.push(newService);
+    console.log("Plan Service Array:", plan.planService); // Debug line: Log the planService array
 
-// Update the plan's total balance with the new service price
-const totalBalance = plan.planService.reduce((sum, service) => {
-  const servicePrice = parseFloat(service.service.servicePrice);
-  if (isNaN(servicePrice)) {
-    // Log the problematic service and its price for debugging
-    console.error("Invalid service price for service:", service.service.serviceName);
-    console.error("Service price:", service.service.servicePrice);
-    throw new Error("Invalid service price for one of the services");
-  }
-  return sum + servicePrice;
-}, 0);
+    // Calculate the total balance using map and reduce
+    const totalBalance = plan.planService
+      .map((service) => service.servicePrice)
+      .reduce((sum, price) => sum + price, 0);
+    console.log("Total Balance before saving:", totalBalance); // Debug line: Log the calculated totalBalance before saving
 
-if (isNaN(totalBalance)) {
-  // Log the plan and its current services for debugging
-  console.error("Invalid total balance for plan:", plan.planName);
-  console.error("Current services:", plan.planService);
-  throw new Error("Invalid total balance");
-}
+    plan.planTotalBalance = totalBalance;
+    console.log("Plan Total Balance:", plan.planTotalBalance); // Debug line: Log the planTotalBalance before saving
 
-plan.planTotalBalance = totalBalance.toFixed(2); // Assuming you want to round to 2 decimal places
-await plan.save();
+    await plan.save();
 
-
-
-
-
+    // Fetch the plan again from the database to verify the updated planTotalBalance
+    const updatedPlan = await Plan.findById(planId);
+    console.log("Updated Plan Total Balance:", updatedPlan.planTotalBalance); // Debug line: Log the updated planTotalBalance
 
     res.status(201).json({ success: true, service: newService });
   } catch (error) {
@@ -108,12 +79,12 @@ await plan.save();
   }
 });
 
+
 //find plan by id
 exports.singleService = asyncHandler(async (req, res, next) => {
   try {
     const service = await Service.findById(req.params.service_id)
-      .populate("plan")
-      .populate("user");
+      
 
     if (!service) {
       return next(new ErrorResponse("Service not found", 404));
@@ -128,8 +99,70 @@ exports.singleService = asyncHandler(async (req, res, next) => {
   }
 });
 
-//update plan
+// Update a service by ID
 exports.updatedService = asyncHandler(async (req, res, next) => {
+  const {
+    serviceName,
+    servicePrice,
+    serviceDescription,
+    serviceAreaOfCover,
+    preAuthorization,
+  } = req.body;
+
+  try {
+    // Get the service ID from the request parameters
+    const serviceId = req.params.id;
+
+    // Check if servicePrice is a valid number
+    if (isNaN(servicePrice)) {
+      return next(new ErrorResponse("Service price must be a number", 400));
+    }
+
+    // Find the service by its ID
+    let service = await PlanService.findById(serviceId);
+
+    if (!service) {
+      return next(new ErrorResponse("Service not found", 404));
+    }
+
+    // Find the plan associated with the service
+    const plan = await Plan.findOne({ planService: serviceId }).populate('planService');
+
+    if (!plan) {
+      return next(new ErrorResponse("Plan not found", 404));
+    }
+
+    // Update the service with the new values
+    service.serviceName = serviceName;
+    service.servicePrice = parseFloat(servicePrice);
+    service.serviceDescription = serviceDescription;
+    service.serviceAreaOfCover = serviceAreaOfCover;
+    service.preAuthorization = preAuthorization;
+
+    // Save the updated service
+    service = await service.save();
+
+    // Recalculate the plan's total balance using map and reduce
+    const totalBalance = plan.planService.reduce((sum, s) => {
+      if (typeof s.servicePrice === 'number') {
+        return sum + s.servicePrice;
+      }
+      return sum;
+    }, 0);
+
+    plan.planTotalBalance = totalBalance;
+
+    // Save the updated plan
+    await plan.save();
+
+    res.status(200).json({ success: true, service, plan });
+  } catch (error) {
+    next(error);
+  }
+});
+
+//update plan
+exports.updatedService1 = asyncHandler(async (req, res, next) => {
   const id = req.params.id;
   const { serviceName, plan, servicePrice, serviceDescription } = req.body;
 
@@ -158,6 +191,74 @@ exports.updatedService = asyncHandler(async (req, res, next) => {
   });
 });
 
+// Update a service by ID
+exports.updatedService2 = asyncHandler(async (req, res, next) => {
+  const {
+    serviceName,
+    servicePrice,
+    serviceDescription,
+    serviceAreaOfCover,
+    preAuthorization,
+  } = req.body;
+  
+  try {
+    // Get the service ID from the request parameters
+    const serviceId = req.params.id;
+    
+    // Check if servicePrice is a valid number
+    if (isNaN(servicePrice)) {
+      return next(new ErrorResponse("Service price must be a number", 400));
+    }
+
+    // Find the service by its ID
+    let service = await PlanService.findById(serviceId);
+    console.log(service.plan)
+
+    if (!service) {
+      return next(new ErrorResponse("Service not found", 404));
+    }
+
+    // Find the plan associated with the service
+    const plan = await Plan.findById(service.plan);
+
+    if (!plan) {
+      return next(new ErrorResponse("Plan not found", 404));
+    }
+
+    // Update the service with the new values
+    service.serviceName = serviceName;
+    service.servicePrice = parseFloat(servicePrice);
+    service.serviceDescription = serviceDescription;
+    service.serviceAreaOfCover = serviceAreaOfCover;
+    service.preAuthorization = preAuthorization;
+
+    // Save the updated service
+    service = await service.save();
+
+    // Update the plan's planService array with the updated service details
+    const planServiceIndex = plan.planService.findIndex((s) => s._id.toString() === serviceId);
+    if (planServiceIndex !== -1) {
+      plan.planService[planServiceIndex] = service;
+    } else {
+      return next(new ErrorResponse("Service not associated with the plan", 404));
+    }
+
+    // Recalculate the plan's total balance using map and reduce
+    const totalBalance = plan.planService
+      .map((s) => s.servicePrice)
+      .reduce((sum, price) => sum + price, 0);
+
+    plan.planTotalBalance = totalBalance;
+
+    // Save the updated plan
+    await plan.save();
+
+    res.status(200).json({ success: true, service, plan });
+  } catch (error) {
+    next(error);
+  }
+});
+
 //Get all all job category
 exports.getAllService = asyncHandler(async (req, res, next) => {
   //enable seach
@@ -179,8 +280,6 @@ exports.getAllService = asyncHandler(async (req, res, next) => {
 
   try {
     const service = await Service.find()
-      .populate("plan")
-      .populate("user")
       .sort({ createdAt: -1 })
       .skip(pageSize * (page - 1))
       .limit(pageSize);
@@ -209,6 +308,62 @@ exports.deleteService = asyncHandler(async (req, res, next) => {
       success: true,
       message: "Service deleted successfully",
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Change a service to another plan
+// Change a service to another plan
+exports.changeServicePlan = asyncHandler(async (req, res, next) => {
+  try {
+    // Get the service ID and new plan ID from the request body
+    const { serviceId, newPlanId } = req.body;
+
+    // Check if the service exists
+    const service = await Service.findById(serviceId);
+
+    if (!service) {
+      return next(new ErrorResponse("Service not found", 404));
+    }
+
+    // Find the current plan to which the service belongs
+    const currentPlan = await Plan.findOne({ planService: serviceId });
+
+    if (!currentPlan) {
+      return next(new ErrorResponse("Current plan not found", 404));
+    }
+
+    // Find the new plan to which you want to add the service
+    const newPlan = await Plan.findById(newPlanId);
+
+    if (!newPlan) {
+      return next(new ErrorResponse("New plan not found", 404));
+    }
+
+    // Remove the service from the current plan's planService array
+    currentPlan.planService = currentPlan.planService.filter((s) => s.toString() !== serviceId);
+
+    // Calculate the current plan's planTotalBalance after removing the service
+    const currentPlanTotalBalance = currentPlan.planService
+      .map((s) => s.servicePrice)
+      .reduce((sum, price) => sum + price, 0);
+    currentPlan.planTotalBalance = currentPlanTotalBalance;
+
+    // Add the service to the new plan's planService array
+    newPlan.planService.push(service);
+
+    // Calculate the new plan's planTotalBalance after adding the service
+    const newPlanTotalBalance = newPlan.planService
+      .map((s) => s.servicePrice)
+      .reduce((sum, price) => sum + price, 0);
+    newPlan.planTotalBalance = newPlanTotalBalance;
+
+    // Save both the current and new plans
+    await currentPlan.save();
+    await newPlan.save();
+
+    res.status(200).json({ success: true, message: "Service changed to a new plan successfully" });
   } catch (error) {
     next(error);
   }

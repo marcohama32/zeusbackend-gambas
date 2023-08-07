@@ -42,27 +42,60 @@ exports.createPlan = async (req, res, next) => {
 };
 
 //find plan by id
-exports.singlePlan = async (req, res, next) => {
+exports.singlePlan = asyncHandler(async (req, res, next) => {
+  const id = req.params.id;
+  const { pageNumber, pageSize, searchTerm } = req.query;
+
   try {
-    const plan = await Plan.findById(req.params.id);
+    // Create a query object to handle the search term
+    const query = {};
+
+    // If a search term is provided, add it to the query object to search by service description
+    if (searchTerm) {
+      query["planService.serviceDescription"] = { $regex: searchTerm, $options: "i" };
+    }
+
+    // Find the total count of plans that match the search term
+    const count = await Plan.find({}).estimatedDocumentCount();
+
+    // Calculate the total number of pages based on the provided pageSize and totalCount
+    const pages = Math.ceil(count / parseInt(pageSize));
+
+    // Calculate the currentPage based on the provided pageNumber or default it to 1 if not provided
+    const page = parseInt(pageNumber) || 1;
+
+    // Find the plan by its ID and populate the planService field with pagination options
+    const plan = await Plan.findById(id)
+      .populate({
+        path: "planService",
+        match: query, // Apply the search term condition for planService
+        options: {
+          sort: { createdAt: -1 },
+          skip: parseInt(pageSize) * (page - 1),
+          limit: parseInt(pageSize),
+        },
+      })
+      .exec();
 
     if (!plan) {
-      return next(new ErrorResponse("Plan not found", 404));
+      return res.status(404).json({ success: false, error: "Plan not found" });
     }
 
     res.status(200).json({
       success: true,
       plan,
+      pages,
+      page,
+      count,
     });
   } catch (error) {
     next(error);
   }
-};
-
+});
 //update plan
 exports.updatePlan = asyncHandler(async (req, res, next) => {
   const id = req.params.plan_id;
-  const { planName, planPrice, planDescription, areaOfCover } = req.body;
+  const { planName, planPrice, planDescription, areaOfCover, status } = req.body;
 
   if (!id || !planName || !planPrice || !planDescription || !areaOfCover) {
     return next(new ErrorResponse("Fields cannot be null", 403));
@@ -70,7 +103,7 @@ exports.updatePlan = asyncHandler(async (req, res, next) => {
 
   const updatedPlan = await Plan.findByIdAndUpdate(
     id,
-    { planName, planPrice, planDescription, areaOfCover },
+    { planName, planPrice, planDescription, areaOfCover, status },
     { new: true }
   );
 
@@ -84,7 +117,7 @@ exports.updatePlan = asyncHandler(async (req, res, next) => {
   });
 });
 
-//Get all all job category
+//here im gething all active plans
 exports.getAllPlan = async (req, res, next) => {
   //enable seach
   const keyword = req.query.keyword
@@ -120,6 +153,44 @@ exports.getAllPlan = async (req, res, next) => {
   }
 };
 
+//here im gething all plan
+exports.getActivePlan = async (req, res, next) => {
+  // Enable search
+  const keyword = req.query.keyword
+    ? {
+        title: {
+          $regex: req.query.keyword,
+          $options: "i",
+        },
+      }
+    : {};
+
+  // Enable pagination
+  const pageSize = 10;
+  const page = Number(req.query.pageNumber) || 1;
+
+  // Get the count of documents with status "Active"
+  const count = await Plan.countDocuments({ status: "Active" });
+
+  try {
+    // Fetch all documents with status "Active" and apply pagination
+    const plan = await Plan.find({ status: "Active", ...keyword })
+      .sort({ createdAt: -1 })
+      .skip(pageSize * (page - 1))
+      .limit(pageSize);
+
+    res.status(200).json({
+      success: true,
+      page,
+      plan,
+      pages: Math.ceil(count / pageSize),
+      count,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 //delete plan
 exports.deletePlan = async (req, res, next) => {
   try {
@@ -140,7 +211,7 @@ exports.deletePlan = async (req, res, next) => {
 
 //////////////////// services //////////////////////
 
-//create service
+//create service unavailable
 exports.createService = async (req, res, next) => {
   try {
     const {
@@ -150,6 +221,7 @@ exports.createService = async (req, res, next) => {
       serviceAreaOfCover,
       preAuthorization,
     } = req.body;
+ 
 
     if (
       !serviceName ||

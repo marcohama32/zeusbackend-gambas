@@ -229,13 +229,84 @@ exports.getThisCompanyUsers = asyncHandler(async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const allUsers = await User.find({ company: id })
-      .populate({ path: "plan", select: "-__v" })
-      .populate({ path: "user", select: "firstName lastName email" });
+    // Enable search
+    const searchTerm = req.query.searchTerm;
+    const accountManagerSearch = req.query.accountManager;
+
+    const keyword = { company: id };
+    if (searchTerm || accountManagerSearch) {
+      keyword["$or"] = [];
+
+      if (searchTerm) {
+        keyword["$or"].push({
+          firstName: {
+            $regex: searchTerm,
+            $options: "i",
+          },
+        });
+        keyword["$or"].push({
+          lastName: {
+            $regex: searchTerm,
+            $options: "i",
+          },
+        });
+        keyword["$or"].push({
+          email: {
+            $regex: searchTerm,
+            $options: "i",
+          },
+        });
+      }
+
+      if (accountManagerSearch) {
+        keyword["$or"].push({
+          "manager.firstName": {
+            $regex: accountManagerSearch,
+            $options: "i",
+          },
+        });
+        keyword["$or"].push({
+          "manager.lastName": {
+            $regex: accountManagerSearch,
+            $options: "i",
+          },
+        });
+      }
+    }
+
+    // Enable pagination
+    const pageSize = 10;
+    const page = Number(req.query.pageNumber) || 1;
+
+    const allUsers = await User.find(keyword)
+      .populate({
+        path: "plan",
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+        },
+      })
+      .populate({
+        path: "manager",
+        populate: {
+          path: "manager",
+          model: "User",
+        },
+      })
+      .populate({ path: "user", select: "firstName lastName email" })
+      .sort({ createdAt: -1 })
+      .skip(pageSize * (page - 1))
+      .limit(pageSize);
+
+    // Get the total count of documents with the applied keyword filter
+    const count = await User.countDocuments(keyword);
 
     res.status(200).json({
       success: true,
+      page,
       allUsers,
+      pages: Math.ceil(count / pageSize),
+      count,
     });
   } catch (error) {
     next(error);

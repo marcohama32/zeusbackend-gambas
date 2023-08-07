@@ -505,3 +505,6 @@ exports.updatedPartnerUser = asyncHandler(async (req, res, next) => {
     partner: updatedPartnerUser,
   });
 });
+
+
+
