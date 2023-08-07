@@ -1,18 +1,24 @@
 const path = require('path')
 const multer = require('multer')
 
+const sanitizeFilename = (name) => {
+  return name.replace(/[^a-zA-Z0-9-_.]/g, '_');
+};
+
 const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-      cb(null, 'uploads/');
-    },
-    filename: function (req, file, cb) {
-        const originalname = file.originalname;
-        const uniqueSuffix = Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 8);
-        const extension = path.extname(originalname);
-        const filename = file.fieldname + '-' + uniqueSuffix + extension;
-        cb(null, filename);
-      },
-  });
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/');
+  },
+  filename: function (req, file, cb) {
+    const originalname = file.originalname;
+    const timestamp = Date.now().toString(36);
+    const sanitizedFilename = sanitizeFilename(originalname);
+    const extension = path.extname(originalname);
+    const filename = `${sanitizedFilename}-${timestamp}${extension}`;
+    cb(null, filename);
+  },
+});
+
   
   const upload = multer({
     storage: storage,

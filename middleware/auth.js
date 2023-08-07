@@ -42,3 +42,10 @@ exports.isAdmin = (req, res, next) => {
   }
   next();
 };
+
+exports.isPartner = (req, res, next) => {
+  if (req.user.role !== 6 && req.user.role !== 1) {
+    return next(new ErrorResponse("Access denied: You dont have access", 401));
+  }
+  next();
+};
