@@ -1,24 +1,29 @@
 const mongoose = require("mongoose");
-const { startSession } = require("mongoose");
 const { ObjectId } = mongoose.Schema;
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-const serviceBalanceSchema = new mongoose.Schema({
+const planServiceSchema = new mongoose.Schema({
   service: {
-    type: ObjectId,
-    ref: "PlanService",
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "PlanServices",
     required: true,
   },
-  balance: {
+  servicePrice: {
+    type: Number,
+    required: true,
+  },
+  amountSpent: {
+    type: Number,
+    default: 0,
+  },
+  remainingBalance: {
     type: Number,
     default: 0,
   },
 });
 
-
 const userSchema = new mongoose.Schema(
-  
   {
     firstName: {
       type: String,
@@ -62,12 +67,13 @@ const userSchema = new mongoose.Schema(
     },
 
     monthlyFee: {
-      type: String,
+      type: Number,
       required: false,
     },
     memberShipID: {
       type: String,
       unique: true,
+      required: false,
     },
     idType: {
       type: String,
@@ -117,7 +123,11 @@ const userSchema = new mongoose.Schema(
         required: false,
       },
     ],
-
+    planService: [planServiceSchema],
+    amountSpent: {
+      type: Number,
+      default: 0,
+    },
     user: {
       type: ObjectId,
       ref: "User",
@@ -138,14 +148,12 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       trim: true,
-      // required: [true, "password name is required"],
-
       default: "mediplus",
       // minlength: [6, "passwprd must have at least (6) caracters"],
     },
     balancePlan: {
-      type: String,
-      default: "0",
+      type: Number,
+      default: 0,
     },
     multipleFiles: {
       type: String,
@@ -153,6 +161,7 @@ const userSchema = new mongoose.Schema(
     avatar: {
       type: String,
     },
+
     myMembers: [
       {
         type: ObjectId,
@@ -160,6 +169,11 @@ const userSchema = new mongoose.Schema(
         required: false,
       },
     ],
+    accountOwner: {
+      type: ObjectId,
+      ref: "User",
+      required: false,
+    },
     role: {
       type: Number,
       default: 0,
@@ -170,8 +184,13 @@ const userSchema = new mongoose.Schema(
       enum: ["yes", "no"],
       default: "yes",
     },
-    serviceBalances: [serviceBalanceSchema],
+    // serviceBalances: [serviceBalanceSchema],
     manager: {
+      type: ObjectId,
+      ref: "User",
+      required: false,
+    },
+    lineManager: {
       type: ObjectId,
       ref: "User",
       required: false,
@@ -184,12 +203,17 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-//encrypting password before saving
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) {
-    next();
-  }
-  this.password = await bcrypt.hash(this.password, 10);
+// Method to calculate remaining balance for each service in a user's plan
+userSchema.methods.calculateRemainingBalance = function () {
+  // Loop through each service in the user's planService array
+  this.planService.forEach((service) => {
+    service.remainingBalance = service.servicePrice - service.amountSpent;
+  });
+};
+
+userSchema.pre("save", function (next) {
+  this.calculateRemainingBalance();
+  next();
 });
 
 //compare user password

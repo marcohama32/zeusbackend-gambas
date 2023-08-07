@@ -1,14 +1,5 @@
 const mongoose = require("mongoose");
-const { ObjectId } = mongoose.Schema;
-
-const planServiceSchema = new mongoose.Schema({
-  service: {
-    type: ObjectId,
-    ref: "Service",
-    required: true,
-  },
-  // other plan service fields...
-});
+const PlanServices = require("./serviceModel"); // Make sure the file path is correct
 
 const planSchema = new mongoose.Schema(
   {
@@ -18,27 +9,40 @@ const planSchema = new mongoose.Schema(
     },
     planTotalBalance: {
       type: Number,
-      trim: true,
-      required: [true, "Plan Price is required"],
+      default:0,
     },
-   
+    planPrice: {
+      type: Number,
+      required: true
+    },
+    areaOfCover:{
+      type:String,
+      required:true
+    },
     planDescription: {
       type: String,
-      trim: true,
       required: [true, "Plan Description is required"],
     },
-    planService: [planServiceSchema], // Using the planServiceSchema as an array element
+    planService: [{ type: mongoose.Schema.Types.ObjectId, ref: "PlanServices" }],
+    // Using the ref property, we reference the "PlanServices" model
     status: {
       type: String,
-      default: "Active"
+      default: "Active",
     },
     user: {
-      type: ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
   },
   { timestamps: true }
 );
+
+// Virtual field to populate services
+planSchema.virtual('services', {
+  ref: 'PlanServices',
+  localField: '_id',
+  foreignField: 'plan',
+});
 
 module.exports = mongoose.model("Plan", planSchema);

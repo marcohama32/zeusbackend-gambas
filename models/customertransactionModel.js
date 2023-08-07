@@ -3,7 +3,6 @@ const { ObjectId } = mongoose.Schema;
 
 const customertransactionSchema = new mongoose.Schema(
   {
-
     user: {
       type: ObjectId,
       ref: "User",
@@ -38,11 +37,32 @@ const customertransactionSchema = new mongoose.Schema(
       ref: "Partner",
       required: true,
     },
+    transactionStatus: {
+      type: String,
+      enum: ["Pending", "Completed", "Revoked"],
+      default: "Pending",
+    },
+    preAuthorization: {
+      type: String,
+      enum: ["yes", "no"], // Accepts "yes" or "no" as string values
+      required: true,
+      default: "no", // New field to indicate if pre-authorization is required
+    },
+    multipleFiles: {
+      type: String,
+    },
+    adminApprovalStatus: {
+      type: Boolean,
+      default: false, // New field to indicate if admin approved the transaction
+    },
+    adminRevokeComment: {
+      type: String, // New field for commenting the reason for revoking the transaction by the admin
+      required: function () {
+        return this.transactionStatus === "Revoked";
+      },
+    },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model(
-  "CustomerTransaction",
-  customertransactionSchema
-);
+module.exports = mongoose.model("CustomerTransaction", customertransactionSchema);

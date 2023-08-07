@@ -1,39 +1,35 @@
-const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
-const { ObjectId } = mongoose.Schema;
 
-const serviceSchema = new mongoose.Schema(
-  {
-    serviceName: {
-      type: String,
-      required: [true, "Company Name is required"],
-    },
-    plan: {
-      type: ObjectId,
-      ref: "Plan",
-      required: true,
-    },
-    servicePrice: {
-      type: Number,
-      trim: true,
-      required: [true, "Service Price is required"],
-    },
-    serviceDescription: {
-      type: String,
-      trim: true,
-      required: [true, "Contact is required"],
-    },
-    authorization: {
-      type: Boolean,
-      default: "false"
-    },
-    user: {
-      type: ObjectId,
-      ref: "User",
-      required: true,
-    },
+const planServiceSchema = new mongoose.Schema({
+  serviceName: {
+    type: String,
+    required: true,
   },
-  { timestamps: true }
-);
+  servicePrice: {
+    type: Number,
+    required: true,
+  },
+  serviceDescription: {
+    type: String,
+    required: true,
+  },
+  serviceAreaOfCover: {
+    type: String,
+    required: true,
+  },
+  preAuthorization: {
+    type: String,
+    enum: ["yes", "no"],
+    required: true,
+  },
+  remainingBalance: {  // Add remainingBalance field
+    type: Number,
+    default: 0,
+  },
+  status: {
+    type: String,
+    default: "Active",
+  },
+});
 
-module.exports = mongoose.model("Service", serviceSchema);
+module.exports = mongoose.model("PlanServices", planServiceSchema);
