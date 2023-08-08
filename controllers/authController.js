@@ -146,7 +146,41 @@ exports.logout = (req, res, next) => {
 //user profile
 exports.userProfile = async (req, res, next) => {
   console.log("Received headers:", req.headers);
-  const user = await User.findById(req.user.id).select("-password");
+  const user = await User.findById(req.user.id)
+  .sort({ createdAt: -1 })
+      .select("-password")
+      .populate({
+        path: "plan",
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+        },
+      })
+      .populate({
+        path: "manager",
+        select: "firstName lastName email",
+        populate: {
+          path: "lineManager",
+          model: "User",
+          select: "firstName lastName email",
+        },
+      })
+      .populate({
+        path: "user",
+        select: "firstName lastName email",
+      }).populate("myMembers")
+      .populate("myMembers")
+      .populate({
+        path: "accountOwner",
+        populate: {
+          path: "manager",
+          select: "firstName lastName email",
+        }
+      }).populate("manager")
+      .populate({
+        path: "user",
+        select: "firstName lastName email",
+      })
 
   res.status(200).json({
     success: true,
