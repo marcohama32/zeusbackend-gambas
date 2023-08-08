@@ -3,6 +3,7 @@ const Plan = require("../../models/planModel");
 const User = require("../../models/userModel");
 const ErrorResponse = require("../../utils/errorResponse");
 const asyncHandler = require("../../middleware/asyncHandler");
+const bcrypt = require("bcrypt");
 
 // upload files
 
@@ -146,6 +147,11 @@ exports.createIndividualUser = asyncHandler(async (req, res, next) => {
 
     const avatar = req.file?.path;
 
+    let hashedPassword = password;
+    if (password) {
+      hashedPassword = await bcrypt.hash(password, 10);
+    }
+
     const customer = await User.create({
       dob,
       idNumber,
@@ -166,7 +172,7 @@ exports.createIndividualUser = asyncHandler(async (req, res, next) => {
       role: 5,
       avatar,
       userType: 5,
-      password,
+      password:hashedPassword,
       user: req.user.id,
     });
 
@@ -202,6 +208,7 @@ exports.editIndividualUser = asyncHandler(async (req, res, next) => {
     plan,
     status,
     relation,
+    password
   } = req.body;
 
   const requiredFields = [
@@ -239,6 +246,11 @@ exports.editIndividualUser = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Plan doesn't exist, please check", 400));
   }
 
+  let hashedPassword = password;
+  if (password) {
+    hashedPassword = await bcrypt.hash(password, 10);
+  }
+
   const updatedCompany = await User.findByIdAndUpdate(
     id,
     {
@@ -262,6 +274,7 @@ exports.editIndividualUser = asyncHandler(async (req, res, next) => {
       avatar,
       userType: 5,
       status,
+      password: hashedPassword,
       user: req.user.id,
     },
     { new: true }
@@ -277,10 +290,86 @@ exports.editIndividualUser = asyncHandler(async (req, res, next) => {
   });
 });
 
+// exports.getAllIndividualCustomer = async (req, res, next) => {
+//   let pageSize = Number(req.query.pageSize) || 10;
+//   let page = Number(req.query.pageNumber) || 1;
+//   const searchTerm = req.query.searchTerm; // Extract searchTerm from query params
+
+//   // Validate pageSize and pageNumber
+//   if (pageSize <= 0) {
+//     return res.status(400).json({ success: false, error: "Invalid pageSize. Must be greater than 0" });
+//   }
+
+//   if (page <= 0) {
+//     return res.status(400).json({ success: false, error: "Invalid pageNumber. Must be greater than 0" });
+//   }
+
+//   try {
+//     let query = { userType: 5 };
+
+//     if (searchTerm) {
+//       query = {
+//         $and: [
+//           { userType: 5 },
+//           {
+//             $or: [
+//               { firstName: { $regex: searchTerm, $options: "i" } },
+//               { lastName: { $regex: searchTerm, $options: "i" } },
+//               { idNumber: { $regex: searchTerm, $options: "i" } },
+//               { contact1: { $regex: searchTerm, $options: "i" } },
+//               { contact2: { $regex: searchTerm, $options: "i" } },
+//               { memberShipID: { $regex: searchTerm, $options: "i" } },
+//               { relation: { $regex: searchTerm, $options: "i" } },
+//               // Add other fields you want to search here
+//             ],
+//           },
+//         ],
+//       };
+
+//       // Check if searchTerm is a valid date and add it to the query
+//       const dateSearch = new Date(searchTerm);
+//       if (!isNaN(dateSearch)) {
+//         query.$and.push({ enrolmentDate: dateSearch });
+//       }
+//     }
+
+//     const count = await User.countDocuments(query);
+
+//     const userIndividual = await User.find(query)
+//       .sort({ createdAt: -1 })
+//       .select("-password")
+//       .populate({
+//         path: "plan",
+//         populate: {
+//           path: "planService",
+//           model: "PlanServices", // Replace with the actual model name for PlanServices
+//         },
+//       })
+//       .populate({
+//         path: "user",
+//         select: "-password",
+//       })
+//       .skip(pageSize * (page - 1))
+//       .limit(pageSize);
+
+//     res.status(200).json({
+//       success: true,
+//       userIndividual,
+//       page,
+//       pages: Math.ceil(count / pageSize),
+//       count,
+//     });
+//   } catch (error) {
+//     return next(error);
+//   }
+// };
+
+
+
 exports.getAllIndividualCustomer = async (req, res, next) => {
   let pageSize = Number(req.query.pageSize) || 10;
   let page = Number(req.query.pageNumber) || 1;
-  const searchTerm = req.query.searchTerm; // Extract searchTerm from query params
+  const searchTerm = req.query.searchTerm;
 
   // Validate pageSize and pageNumber
   if (pageSize <= 0) {
@@ -292,14 +381,12 @@ exports.getAllIndividualCustomer = async (req, res, next) => {
   }
 
   try {
-    let query = { userType: 5 };
+    let query = { $or: [{ userType: 5 }, { userType: 8 }] }; // Users with userType 5 or 8
 
     if (searchTerm) {
       query = {
         $and: [
-          { userType: 5 },
-          {
-            $or: [
+          { $or: [
               { firstName: { $regex: searchTerm, $options: "i" } },
               { lastName: { $regex: searchTerm, $options: "i" } },
               { idNumber: { $regex: searchTerm, $options: "i" } },
@@ -307,13 +394,11 @@ exports.getAllIndividualCustomer = async (req, res, next) => {
               { contact2: { $regex: searchTerm, $options: "i" } },
               { memberShipID: { $regex: searchTerm, $options: "i" } },
               { relation: { $regex: searchTerm, $options: "i" } },
-              // Add other fields you want to search here
             ],
           },
         ],
       };
 
-      // Check if searchTerm is a valid date and add it to the query
       const dateSearch = new Date(searchTerm);
       if (!isNaN(dateSearch)) {
         query.$and.push({ enrolmentDate: dateSearch });
@@ -322,20 +407,43 @@ exports.getAllIndividualCustomer = async (req, res, next) => {
 
     const count = await User.countDocuments(query);
 
-    const userIndividual = await User.find(query)
+    const users = await User.find(query)
       .sort({ createdAt: -1 })
       .select("-password")
-      .populate("plan")
+      .populate({
+        path: "accountOwner",
+        populate: {
+          path: "manager",
+          select: "firstName lastName email",
+        }
+      })
+      .populate({
+        path: "plan",
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+        },
+      })
+      .populate("manager")
       .populate({
         path: "user",
-        select: "-password",
+        select: "firstName lastName email",
       })
+      .populate("myMembers")
       .skip(pageSize * (page - 1))
       .limit(pageSize);
 
+    // Calculate updated remaining balance for each service in the user's planService
+    const usersWithUpdatedBalance = users.map((user) => {
+      user.planService.forEach((service) => {
+        service.remainingBalance = service.calculateRemainingBalance();
+      });
+      return user;
+    });
+
     res.status(200).json({
       success: true,
-      userIndividual,
+      users: usersWithUpdatedBalance,
       page,
       pages: Math.ceil(count / pageSize),
       count,
@@ -344,6 +452,9 @@ exports.getAllIndividualCustomer = async (req, res, next) => {
     return next(error);
   }
 };
+
+
+
 
 
 

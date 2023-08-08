@@ -3,9 +3,10 @@ const Plan = require("../../models/planModel");
 const User = require("../../models/userModel");
 const ErrorResponse = require("../../utils/errorResponse");
 const asyncHandler = require("../../middleware/asyncHandler");
+const bcrypt = require("bcrypt");
 
-//create IndividualCustomer
-exports.createCustomerDependent = async (req, res, next) => {
+//create corporate dependent
+exports.createCorporateDependent = async (req, res, next) => {
   const id = req.body.id;
   if (!id) {
     return res
@@ -29,11 +30,11 @@ exports.createCustomerDependent = async (req, res, next) => {
     }
 
     if (checkMain.status !== "Active") {
-        return res.status(400).json({
-          success: false,
-          error: "This Customer is not Active, please validate",
-        });
-      }
+      return res.status(400).json({
+        success: false,
+        error: "This Customer is not Active, please validate",
+      });
+    }
 
     const {
       firstName,
@@ -50,7 +51,7 @@ exports.createCustomerDependent = async (req, res, next) => {
       contact1,
       contact2,
       plan,
-      manager,
+      company,
       password,
       monthlyFee,
     } = req.body;
@@ -69,7 +70,7 @@ exports.createCustomerDependent = async (req, res, next) => {
       address,
       contact1,
       plan,
-      manager,
+      company,
     ];
 
     if (requiredFields.some((field) => !field)) {
@@ -109,6 +110,11 @@ exports.createCustomerDependent = async (req, res, next) => {
     }
 
     const avatar = req.file?.path;
+    // Use the same hashing logic as in the model's pre-save hook
+    let hashedPassword = password;
+    if (!hashedPassword) {
+      hashedPassword = await bcrypt.hash("mediplus", 10);
+    }
 
     const dependent = await User.create({
       dob,
@@ -123,14 +129,15 @@ exports.createCustomerDependent = async (req, res, next) => {
       firstName,
       gender,
       lastName,
-      manager,
       monthlyFee,
+      company,
       plan,
+      accountOwner: id,
       relation,
       role: 7,
       avatar,
-      userType: 5,
-      password,
+      userType: 7,
+      password: hashedPassword,
       user: req.user.id,
     });
 
@@ -149,49 +156,52 @@ exports.createCustomerDependent = async (req, res, next) => {
   }
 };
 
-//update Company
-exports.editIndividualUser2 = asyncHandler(async (req, res, next) => {
+//update corporate dependent
+exports.updateCorporateDependent = asyncHandler(async (req, res, next) => {
+ 
   const id = req.params.id;
+
   const avatar = req.file?.path;
 
   const {
-    dob,
-    idNumber,
+    firstName,
+    lastName,
     idType,
+    idNumber,
+    dob,
+    enrolmentDate,
+    gender,
+    relation,
+    email,
+    memberShipID,
     address,
     contact1,
     contact2,
-    email,
-    enrolmentDate,
-    memberShipID,
-    firstName,
-    manager,
-    gender,
-    lastName,
-    monthlyFee,
     plan,
+    company,
+    password,
+    monthlyFee,
     status,
   } = req.body;
-  relation = "Main";
 
   const requiredFields = [
-    dob,
-    idNumber,
+    firstName,
+    lastName,
     idType,
+    idNumber,
+    dob,
+    enrolmentDate,
+    gender,
+    relation,
+    email,
+    memberShipID,
     address,
     contact1,
-    contact2,
-    email,
-    enrolmentDate,
-    memberShipID,
-    firstName,
-    manager,
-    gender,
-    lastName,
-    monthlyFee,
     plan,
-    status,
+    company,
   ];
+
+
 
   if (requiredFields.some((field) => !field)) {
     return next(new ErrorResponse("Fields cannot be null", 400));
@@ -201,11 +211,21 @@ exports.editIndividualUser2 = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Contact must be a number", 400));
   }
 
-  // Check if plan  exists for the given plan
-  // console.log(plan)
   // Check if serviceName already exists for the given plan
   if (!(await Plan.exists({ _id: plan }))) {
     return next(new ErrorResponse("Plan doesn't exist, please check", 400));
+  }
+
+  const existingPlan = await Plan.findById(plan);
+  if (!existingPlan) {
+    return res
+      .status(400)
+      .json({ success: false, error: "Plan doesn't exist, please check" });
+  }
+
+  let hashedPassword = password;
+  if (!hashedPassword) {
+    hashedPassword = await bcrypt.hash("mediplus", 10);
   }
 
   const updatedCompany = await User.findByIdAndUpdate(
@@ -221,16 +241,17 @@ exports.editIndividualUser2 = asyncHandler(async (req, res, next) => {
       enrolmentDate,
       memberShipID,
       firstName,
-      manager,
       gender,
       lastName,
       monthlyFee,
+      company,
       plan,
-      relation: "Main",
-      role: 5,
+      relation,
+      role: 7,
       avatar,
-      userType: 5,
+      userType: 7,
       status,
+      password: hashedPassword,
       user: req.user.id,
     },
     { new: true }
@@ -245,6 +266,264 @@ exports.editIndividualUser2 = asyncHandler(async (req, res, next) => {
     company: updatedCompany,
   });
 });
+
+
+//create Invidividual dependent
+exports.createIndividualDependent = async (req, res, next) => {
+  const id = req.body.id;
+  if (!id) {
+    return res
+      .status(400)
+      .json({ success: false, error: "Select one Main customer" });
+  }
+
+  try {
+    const checkMain = await User.findById(id);
+    if (!checkMain) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Main customer not found" });
+    }
+
+    if (checkMain.relation !== "Main") {
+      return res.status(400).json({
+        success: false,
+        error: "Only Main member can have dependents",
+      });
+    }
+
+    if (checkMain.status !== "Active") {
+      return res.status(400).json({
+        success: false,
+        error: "This Customer is not Active, please validate",
+      });
+    }
+
+    const {
+      firstName,
+      lastName,
+      idType,
+      idNumber,
+      dob,
+      enrolmentDate,
+      gender,
+      relation,
+      email,
+      memberShipID,
+      address,
+      contact1,
+      contact2,
+      plan,
+      password,
+      monthlyFee,
+    } = req.body;
+
+    const requiredFields = [
+      firstName,
+      lastName,
+      idType,
+      idNumber,
+      dob,
+      enrolmentDate,
+      gender,
+      relation,
+      email,
+      memberShipID,
+      address,
+      contact1,
+      plan,
+    ];
+
+    if (requiredFields.some((field) => !field)) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Fields cannot be null" });
+    }
+
+    // Check if contact is a valid number
+    if (isNaN(contact1) || isNaN(contact2)) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Validate all fields" });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        error: "User with the same data already exists",
+      });
+    }
+
+    const existingUserByMemberShipID = await User.findOne({ memberShipID });
+    if (existingUserByMemberShipID) {
+      return res.status(400).json({
+        success: false,
+        error: "User with the same memberShipID already exists",
+      });
+    }
+
+    const existingPlan = await Plan.findById(plan);
+    if (!existingPlan) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Plan doesn't exist, please check" });
+    }
+
+    const avatar = req.file?.path;
+    // Use the same hashing logic as in the model's pre-save hook
+    let hashedPassword = password;
+    if (!hashedPassword) {
+      hashedPassword = await bcrypt.hash("mediplus", 10);
+    }
+
+    const dependent = await User.create({
+      dob,
+      idNumber,
+      idType,
+      address,
+      contact1,
+      contact2,
+      email,
+      enrolmentDate,
+      memberShipID,
+      firstName,
+      gender,
+      lastName,
+      monthlyFee,
+      plan,
+      accountOwner: id,
+      relation,
+      role: 8,
+      avatar,
+      userType: 8,
+      password: hashedPassword,
+      user: req.user.id,
+    });
+
+    const myMember = await User.findByIdAndUpdate(
+      id,
+      {
+        $addToSet: { myMembers: dependent._id },
+      },
+      { new: true }
+    );
+
+    res.status(201).json({ success: true, dependent, myMember });
+  } catch (error) {
+    console.error("Error updating main user:", error);
+    next(error);
+  }
+};
+
+//update Invidividual dependent
+exports.updateInvidividualDependent = asyncHandler(async (req, res, next) => {
+ 
+  const id = req.params.id;
+
+  const avatar = req.file?.path;
+
+  const {
+    firstName,
+    lastName,
+    idType,
+    idNumber,
+    dob,
+    enrolmentDate,
+    gender,
+    relation,
+    email,
+    memberShipID,
+    address,
+    contact1,
+    contact2,
+    plan,
+    password,
+    monthlyFee,
+    status,
+  } = req.body;
+
+  const requiredFields = [
+    firstName,
+    lastName,
+    idType,
+    idNumber,
+    dob,
+    enrolmentDate,
+    gender,
+    relation,
+    email,
+    memberShipID,
+    address,
+    contact1,
+    plan,
+  ];
+
+
+
+  if (requiredFields.some((field) => !field)) {
+    return next(new ErrorResponse("Fields cannot be null", 400));
+  }
+  // Check if contact is a valid number
+  if (isNaN(contact1) || isNaN(contact2) || isNaN(monthlyFee)) {
+    return next(new ErrorResponse("Contact must be a number", 400));
+  }
+
+  // Check if serviceName already exists for the given plan
+  if (!(await Plan.exists({ _id: plan }))) {
+    return next(new ErrorResponse("Plan doesn't exist, please check", 400));
+  }
+
+  const existingPlan = await Plan.findById(plan);
+  if (!existingPlan) {
+    return res
+      .status(400)
+      .json({ success: false, error: "Plan doesn't exist, please check" });
+  }
+
+  let hashedPassword = password;
+  if (!hashedPassword) {
+    hashedPassword = await bcrypt.hash("mediplus", 10);
+  }
+
+  const updatedCompany = await User.findByIdAndUpdate(
+    id,
+    {
+      dob,
+      idNumber,
+      idType,
+      address,
+      contact1,
+      contact2,
+      email,
+      enrolmentDate,
+      memberShipID,
+      firstName,
+      gender,
+      lastName,
+      monthlyFee,
+      plan,
+      relation,
+      role: 8,
+      avatar,
+      userType: 8,
+      status,
+      password: hashedPassword,
+      user: req.user.id,
+    },
+    { new: true }
+  );
+
+  if (!updatedCompany) {
+    return next(new ErrorResponse("Service not found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    company: updatedCompany,
+  });
+});
+
 
 exports.getAllIndividualCustomer2 = async (req, res, next) => {
   const pageSize = Number(req.query.pageSize) || 10;
