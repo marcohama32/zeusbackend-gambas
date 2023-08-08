@@ -40,9 +40,10 @@ exports.getChatMessages = asyncHandler(async (req, res) => {
         { senderId, receiverId },
         { senderId: receiverId, receiverId: senderId },
       ],
+    }).populate({
+      path: 'senderId receiverId', // Populate both sender and receiver
+      select: 'firstName lastName email contact1 contact2 address', // Select the desired fields
     });
-
-    console.log("Chat messages found:", chatMessages);
 
     // Send the messages as a response
     res.status(200).json(chatMessages);
