@@ -3,19 +3,13 @@ const Plan = require("../../models/planModel");
 const User = require("../../models/userModel");
 const ErrorResponse = require("../../utils/errorResponse");
 const asyncHandler = require("../../middleware/asyncHandler");
-const { validationResult } = require("express-validator");
+
 const bcrypt = require("bcrypt");
 
 exports.createManagerUser = asyncHandler(async (req, res, next) => {
   try {
     // Validate user input using express-validator (optional but recommended)
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array(),
-      });
-    }
+ 
 
     const {
       firstName,
