@@ -2,7 +2,7 @@ const FilesTemplate = require("../models/filesTemplate");
 const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/asyncHandler");
 
-//create IndividualCustomer
+//create File Template
 exports.createFileTemplate = asyncHandler(async (req, res, next) => {
   try {
     const { description } = req.body;
@@ -114,3 +114,40 @@ exports.deleteFile = async (req, res, next) => {
     return next(error);
   }
 };
+
+exports.getAllFileTemplates = asyncHandler(async (req, res, next) => {
+  try {
+    const pageSize = Number(req.query.pageSize) || 10;
+    const page = Number(req.query.pageNumber) || 1;
+    const searchTerm = req.query.searchTerm;
+
+    // Validate pageSize and pageNumber
+    if (pageSize <= 0 || page <= 0) {
+      return res.status(400).json({ success: false, error: "Invalid pageSize or pageNumber" });
+    }
+
+    let query = {};
+
+    if (searchTerm) {
+      query = {
+        description: { $regex: searchTerm, $options: "i" }, // Case-insensitive search for description field
+      };
+    }
+
+    const count = await FilesTemplate.countDocuments(query);
+
+    const fileTemplates = await FilesTemplate.find(query)
+      .skip(pageSize * (page - 1))
+      .limit(pageSize);
+
+    res.status(200).json({
+      success: true,
+      count,
+      page,
+      pages: Math.ceil(count / pageSize),
+      fileTemplates,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
