@@ -1252,54 +1252,53 @@ exports.getLogedCustomerTransactions = asyncHandler(async (req, res, next) => {
 });
 
 exports.ussd = asyncHandler(async (req, res, next) => {
-
-  //  const contactNumber = "+258844232354"; // Replace with the actual contact number you're searching for
-  // const result = await User.findOne({ contact1: contactNumber }, '_id');
-  // const transUser = await Transaction.find({customerId: result._id}, 'invoiceNumber amount transactionStatus').limit(10).lean(); 
-  // const transUserWithoutId = transUser.map(doc => {
-  //   const { _id, ...docWithoutId } = doc;
-  //   return docWithoutId;
-  // });
-  // console.log(transUserWithoutId)
-
   const { sessionId, serviceCode, phoneNumber, text } = req.body;
 
-  let response ="";
+  let response = "";
 
-  if(text == ``){
-    // This is the firt request. Note how we start the response with CON
-    response = `CON Wellcome to Mediplus ? \n
+  if (text === "") {
+    // This is the first request. Start the response with CON
+    response = `CON Welcome to Mediplus ?\n
     1. My Transactions
     2. Benefits
     3. Get Code
     4. My Account
     0. Exit`;
-  } else if(text == "1"){
-    // Business logic for firt level response
-    const result = await User.findOne({ contact1: phoneNumber }, '_id');
-    const transUser = await Transaction.find({customerId: result._id}, 'invoiceNumber amount transactionStatus').limit(10).lean(); 
-    // const transUserWithoutId = transUser.map(doc => {
-    //   const { _id, ...docWithoutId } = doc;
-    //   return docWithoutId;
-    // });
-    response = `END You Transactions ${transUser}`
-  } else if(text == `2`){
-    // Get the mobile number from db
+  } else if (text === "1") {
+    try {
+      // Business logic for first level response
+      const result = await User.findOne({ contact1: phoneNumber }, '_id');
+      if (result) {
+        const transUser = await Transaction.find({ customerId: result._id }, 'invoiceNumber amount transactionStatus').limit(10).lean();
+        response = `CON Your Transactions:\n`;
+        transUser.forEach((transaction, index) => {
+          response += `${index + 1}. Invoice Number: ${transaction.invoiceNumber}\n   Amount: ${transaction.amount}\n   Transaction Status: ${transaction.transactionStatus}\n\n`;
+        });
+      } else {
+        response = `END No transactions found for your number`;
+      }
+    } catch (error) {
+      response = `END Error fetching transactions`;
+    }
+  } else if (text === "2") {
+    // Business logic for second level response
 
-    //terminal request
-    response = `END You phone number is ${phoneNumber}`
-  }else if(text == `1*1`){
-    const accountNumber = `849904322`
+    // Terminal response
+    response = `END Your phone number is ${phoneNumber}`;
+  } else if (text === "1*1") {
+    const accountNumber = `849904322`;
 
-    // terminal request start with END
-    response = `END Your account number is ${accountNumber}`
-  }else if(`1*2`){
-    //Get data from DB
+    // Terminal response
+    response = `END Your account number is ${accountNumber}`;
+  } else if (text === "1*2") {
+    // Get data from DB
     const balance = "3.000.00 MT";
-    //terminal response start END
-    response = `END You balance is ${balance}`
+
+    // Terminal response
+    response = `END Your balance is ${balance}`;
   }
-  //send the response back to API
-  res.set('Content-type: text/plain')
-  res.send(response)
+
+  // Send the response back to API
+  res.set('Content-type: text/plain');
+  res.send(response);
 });
