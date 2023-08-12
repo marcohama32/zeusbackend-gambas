@@ -1278,11 +1278,11 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     // Business logic for firt level response
     const result = await User.findOne({ contact1: phoneNumber }, '_id');
     const transUser = await Transaction.find({customerId: result._id}, 'invoiceNumber amount transactionStatus').limit(10).lean(); 
-    const transUserWithoutId = transUser.map(doc => {
-      const { _id, ...docWithoutId } = doc;
-      return docWithoutId;
-    });
-    response = `END You balance is ${transUserWithoutId}`
+    // const transUserWithoutId = transUser.map(doc => {
+    //   const { _id, ...docWithoutId } = doc;
+    //   return docWithoutId;
+    // });
+    response = `END You Transactions ${transUser}`
   } else if(text == `2`){
     // Get the mobile number from db
 
