@@ -1253,9 +1253,14 @@ exports.getLogedCustomerTransactions = asyncHandler(async (req, res, next) => {
 
 exports.ussd = asyncHandler(async (req, res, next) => {
 
-  // const contactNumber = "25884232354"; // Replace with the actual contact number you're searching for
-
-  // console.log(user);
+  //  const contactNumber = "+258844232354"; // Replace with the actual contact number you're searching for
+  // const result = await User.findOne({ contact1: contactNumber }, '_id');
+  // const transUser = await Transaction.find({customerId: result._id}, 'invoiceNumber amount transactionStatus').limit(10).lean(); 
+  // const transUserWithoutId = transUser.map(doc => {
+  //   const { _id, ...docWithoutId } = doc;
+  //   return docWithoutId;
+  // });
+  // console.log(transUserWithoutId)
 
   const { sessionId, serviceCode, phoneNumber, text } = req.body;
 
@@ -1271,8 +1276,13 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     0. Exit`;
   } else if(text == "1"){
     // Business logic for firt level response
-    const user = await User.find({ contact1: phoneNumber });
-    response = `END You balance is ${user}`
+    const result = await User.findOne({ contact1: phoneNumber }, '_id');
+    const transUser = await Transaction.find({customerId: result._id}, 'invoiceNumber amount transactionStatus').limit(10).lean(); 
+    const transUserWithoutId = transUser.map(doc => {
+      const { _id, ...docWithoutId } = doc;
+      return docWithoutId;
+    });
+    response = `END You balance is ${transUserWithoutId}`
   } else if(text == `2`){
     // Get the mobile number from db
 
