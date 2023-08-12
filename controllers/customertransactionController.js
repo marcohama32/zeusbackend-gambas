@@ -1272,7 +1272,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
         const transUser = await Transaction.find({ customerId: result._id }, 'invoiceNumber amount transactionStatus').limit(10).lean();
         response = `CON Your Transactions:\n`;
         transUser.forEach((transaction, index) => {
-          response += `${index + 1}. Invoice Number: ${transaction.invoiceNumber}\n   Amount: ${transaction.amount}\n   Transaction Status: ${transaction.transactionStatus}\n\n`;
+          response += `${index + 1}. Inv Number: ${transaction.invoiceNumber}\n   Amount: ${transaction.amount}\n   Status: ${transaction.transactionStatus}\n\n`;
         });
       } else {
         response = `END No transactions found for your number`;
@@ -1285,17 +1285,21 @@ exports.ussd = asyncHandler(async (req, res, next) => {
 
     // Terminal response
     response = `END Your phone number is ${phoneNumber}`;
-  } else if (text === "1*1") {
-    const accountNumber = `849904322`;
-
+  } else if (text === "3") {
     // Terminal response
-    response = `END Your account number is ${accountNumber}`;
-  } else if (text === "1*2") {
-    // Get data from DB
-    const balance = "3.000.00 MT";
-
+    response = `CON Select option ?\n
+    1. Generate code
+    2. Get last code
+    0. Exit`;
+  } else if (text === "4") {
     // Terminal response
-    response = `END Your balance is ${balance}`;
+    response = `CON Select option ?\n
+    1. My Name
+    2. Contacts
+    3. DOB
+    4. MemberShip ID
+    5. Dependents
+    0. Exit`;
   }
 
   // Send the response back to API
