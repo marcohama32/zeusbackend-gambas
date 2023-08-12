@@ -1264,7 +1264,8 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     3. Get Code
     4. My Account
     0. Exit`;
-  } else if (text === "1") {
+  }
+   else if (text === "1") {
     try {
       // Business logic for first level response
       const result = await User.findOne({ contact1: phoneNumber }, '_id');
@@ -1290,6 +1291,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     response = `CON Select option ?\n
     1. Generate code
     2. Get last code
+    *. Back
     0. Exit`;
   } else if (text === "4") {
     // Terminal response
@@ -1299,7 +1301,14 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     3. DOB
     4. MemberShip ID
     5. Dependents
+    *. Back
     0. Exit`;
+  } else if(text === "4*1"){
+    response = `END You Name is Marco Hama`;
+  }
+  else if(text === "0"){
+     // Exit the session
+     response = `END Thank you for using Mediplus. Have a nice day!`;
   }
 
   // Send the response back to API
