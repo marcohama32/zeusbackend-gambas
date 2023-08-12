@@ -6,34 +6,21 @@ const bodyParser = require("body-parser");
 require("dotenv").config();
 var cors = require("cors");
 const cookieParser = require("cookie-parser");
-const {errorHandler, notFound} = require('./middleware/error');
+const { errorHandler, notFound } = require('./middleware/error');
 
 // Import Socket.IO library
 const http = require("http");
 
-app.use(express.json());
-app.use(cors());
-//import routes
-const authRoutes = require("./routes/authRoutes");
-const ussd = require("./routes/ussdRoutes")
-const userRoutes = require("./routes/userRoutes");
-const jobTypeRoutes = require("./routes/jobsTypeRoutes");
-const jobRoutes = require("./routes/jobRoutes");
-const planRoutes = require("./routes/planRoutes");
-const serviceRoutes = require("./routes/serviceRoutes");
-const companyRoutes = require("./routes/companyRoutes");
-const partnerRoutes = require("./routes/partnerRoutes");
-const ctransationRoutes = require("./routes/customertransactionRoutes");
-const chatMessage = require("./routes/chatMessageRoutes");
-// const FilesTemplate = require("./routes/filesTemplateRoutes")
-
-
 // Middleware
 app.use(morgan("dev"));
-app.use(bodyParser.json());
-
-// Set the strictQuery option to false
-mongoose.set('strictQuery', false);
+app.use(bodyParser.json({ limit: "10mb" }));
+app.use(
+  bodyParser.urlencoded({
+    limit: "10mb",
+    extended: true,
+  })
+);
+app.use(cookieParser());
 
 // Database connection
 mongoose
@@ -44,35 +31,39 @@ mongoose
   .then(() => console.log("DB connected"))
   .catch((err) => console.log(err));
 
-//middleware
-app.use(morgan("dev"));
-app.use(bodyParser.json({ limit: "10mb" }));
-app.use(
-  bodyParser.urlencoded({
-    limit: "10mb",
-    extended: true,
-  })
-);
-app.use('/uploads',express.static('uploads'))
-app.use(cookieParser())
-app.use(cors());
+// Serve uploaded files
+app.use('/uploads', express.static('uploads'));
 
-// Create HTTP server
-const server = http.createServer(app);
+// Enable CORS
+app.use(cors());
 
 // Import SSE router and use it
 const sseRoutes = require("./routes/sseRoutes");
 app.use("/api", sseRoutes.router);
 
-//require socketHandler after create http server
+// Create HTTP server
+const server = http.createServer(app);
+
+// Require and initialize socketHandler after creating the HTTP server
 require("./middleware/socketHandler")(server);
 
-//Routes middleware
-app.use("/api", authRoutes);
+// Import routes
+const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
+const jobTypeRoutes = require("./routes/jobsTypeRoutes");
+const jobRoutes = require("./routes/jobRoutes");
+const planRoutes = require("./routes/planRoutes");
+const serviceRoutes = require("./routes/serviceRoutes");
+const companyRoutes = require("./routes/companyRoutes");
+const partnerRoutes = require("./routes/partnerRoutes");
+const ctransationRoutes = require("./routes/customertransactionRoutes");
+const chatMessage = require("./routes/chatMessageRoutes");
+const FilesTemplate = require("./routes/filesTemplateRoutes")
+const ussd = require("./routes/ussdRoutes")
 
-//routes
+// Routes middleware
+app.use("/api", authRoutes);
 app.use("/api", userRoutes);
-app.use("/api", ussd)
 app.use("/api", jobTypeRoutes);
 app.use("/api", jobRoutes);
 app.use("/api", planRoutes)
@@ -81,19 +72,19 @@ app.use("/api", companyRoutes)
 app.use("/api", partnerRoutes)
 app.use("/api", ctransationRoutes)
 app.use("/api", chatMessage)
-// app.use("/api", FilesTemplate)
+app.use("/api", FilesTemplate)
+app.use("/api", ussd)
 
-
-//error middleware
-// app.use(notFound)
+// Error middleware
+app.use(notFound)
 app.use(errorHandler)
 
-
-// Place the middleware here
+// Place the additional middleware here
 app.use((req, res, next) => {
   console.log("Received headers:", req.headers);
   next();
 });
+
 // Port
 const port = process.env.PORT || 8000;
 
