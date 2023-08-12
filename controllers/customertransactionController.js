@@ -1252,9 +1252,11 @@ exports.getLogedCustomerTransactions = asyncHandler(async (req, res, next) => {
 });
 
 exports.ussd = asyncHandler(async (req, res, next) => {
-  // const phoneNumber1 = "+258844232354"
+  const phoneNumber1 = "+258844232354"
   // const result = await User.findOne({ contact1: phoneNumber1 }, "myMembers");
-  // console.log("Resultado",result)
+  
+  const result = await User.findOne({ contact1: phoneNumber1 }, "myMembers");
+  console.log("Result",result)
 
   const { sessionId, serviceCode, phoneNumber, text } = req.body;
 
@@ -1380,12 +1382,15 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     }
   }else if (text === "4*5") {
     try {
-      const result = await User.findOne({ contact1: phoneNumber }, "myMembers");
+      const result = await User.findOne({ contact1: phoneNumber }).populate("myMembers", "firstName lastName memberShipID monthlyFee");
+  
       if (result) {
         response = `CON Your Dependents:\n`;
-        result.myMembers.forEach((dependent, index) => {
+  
+        for (let index = 0; index < result.myMembers.length; index++) {
+          const dependent = result.myMembers[index];
           response += `${index + 1}. Name: ${dependent.firstName}\n   Last Name: ${dependent.lastName}\n   memberShipID: ${dependent.memberShipID}\n   Monthly Fee: ${dependent.monthlyFee}\n\n`;
-        });
+        }
       } else {
         response = `END Dependents not found for your number`;
       }
