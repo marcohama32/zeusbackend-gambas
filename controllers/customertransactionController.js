@@ -1298,24 +1298,26 @@ exports.ussd = asyncHandler(async (req, res, next) => {
   } else if (text === "2") {
     // Business logic for benefits
 
-
     try {
       const result = await User.findOne({ contact1: phoneNumber }).populate({
-        path: "plan.planService",
-        select: "serviceName remainingBalance",
+        path: "plan",
+        populate: {
+          path: "planService",
+          select: "serviceName remainingBalance",
+        },
       });
   
-      if (result) {
+      if (result && result.plan) {
         const plan = result.plan;
   
-        response = `CON Your Plan Benefits:\n`;
+        response = `CON Your Plan Services:\n`;
   
         for (let index = 0; index < plan.length; index++) {
           const planService = plan[index].planService;
           response += `${index + 1}. Service Name: ${planService.serviceName}\n   Remaining Balance: ${planService.remainingBalance}\n\n`;
         }
       } else {
-        response = `END Plan Benefits not found for your number`;
+        response = `END Plan Services not found for your number`;
       }
     } catch (error) {
       response = `END Error fetching Plan Benefits`;
