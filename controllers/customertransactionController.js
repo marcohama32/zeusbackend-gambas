@@ -1264,16 +1264,24 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     3. Get Code
     4. My Account
     0. Exit`;
-  }
-   else if (text === "1") {
+  } else if (text === "1") {
     try {
       // Business logic for first level response
-      const result = await User.findOne({ contact1: phoneNumber }, '_id');
+      const result = await User.findOne({ contact1: phoneNumber }, "_id");
       if (result) {
-        const transUser = await Transaction.find({ customerId: result._id }, 'invoiceNumber amount transactionStatus').limit(10).lean();
+        const transUser = await Transaction.find(
+          { customerId: result._id },
+          "invoiceNumber amount transactionStatus"
+        )
+          .limit(10)
+          .lean();
         response = `CON Your Transactions:\n`;
         transUser.forEach((transaction, index) => {
-          response += `${index + 1}. Inv Number: ${transaction.invoiceNumber}\n   Amount: ${transaction.amount}\n   Status: ${transaction.transactionStatus}\n\n`;
+          response += `${index + 1}. Inv Number: ${
+            transaction.invoiceNumber
+          }\n   Amount: ${transaction.amount}\n   Status: ${
+            transaction.transactionStatus
+          }\n\n`;
         });
       } else {
         response = `END No transactions found for your number`;
@@ -1303,9 +1311,12 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     5. Dependents
     *. Back
     0. Exit`;
-  } else if(text === "4*1"){
+  } else if (text === "4*1") {
     try {
-      const result = await User.findOne({ contact1: phoneNumber }, 'firstName lastName');
+      const result = await User.findOne(
+        { contact1: phoneNumber },
+        "firstName lastName"
+      );
       if (result) {
         const firstName = result.firstName;
         const lastName = result.lastName;
@@ -1316,13 +1327,84 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     } catch (error) {
       response = `END Error fetching name`;
     }
-  }
-  else if(text === "0"){
-     // Exit the session
-     response = `END Thank you for using Mediplus. Have a nice day!`;
+  } else if (text === "4*2") {
+    try {
+      const result = await User.findOne(
+        { contact1: phoneNumber },
+        "contact1 contact2"
+      );
+      if (result) {
+        const contact1 = result.contact1;
+        const contact2 = result.contact2;
+        response = `END Your contact1 is: ${contact1} contact2 is: ${contact2}`;
+      } else {
+        response = `END Contact not found for your account`;
+      }
+    } catch (error) {
+      response = `END Error fetching contact`;
+    }
+  } else if (text === "4*3") {
+    try {
+      const result = await User.findOne({ contact1: phoneNumber }, "dob");
+      if (result) {
+        const dob = result.dob;
+
+        const date = new Date(dob);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+
+        response = `END Your Date of birth is: ${year}-${month}-${day}`;
+      } else {
+        response = `END Date of birth not found for your number`;
+      }
+    } catch (error) {
+      response = `END Error fetching Date of birth`;
+    }
+  } else if (text === "4*4") {
+    try {
+      const result = await User.findOne({ contact1: phoneNumber }, "memberShipID");
+      if (result) {
+        const memberShipID = result.memberShipID;
+
+        response = `END Your memberShip ID is: ${memberShipID}`;
+      } else {
+        response = `END MemberShip ID not found for your number`;
+      }
+    } catch (error) {
+      response = `END Error fetching MemberShip ID`;
+    }
+  }else if (text === "4*5") {
+    try {
+      const result = await User.findOne({ contact1: phoneNumber }, "myMembers");
+      if (result) {
+        // const transUser = await Transaction.find(
+        //   { customerId: result._id },
+        //   "invoiceNumber amount transactionStatus"
+        // )
+        //   .limit(10)
+        //   .lean();
+
+        response = `CON Your Dependents:\n`;
+        result.forEach((depedent, index) => {
+          response += `${index + 1}. Name: ${
+            depedent.firstName
+          }\n   Last Name: ${depedent.lastName}\n   memberShipID: ${
+            depedent.memberShipID
+          }\n\n`;
+        });
+      } else {
+        response = `END MemberShip ID not found for your number`;
+      }
+    } catch (error) {
+      response = `END Error fetching MemberShip ID`;
+    }
+  }else if (text === "0") {
+    // Exit the session
+    response = `END Thank you for using Mediplus. Have a nice day!`;
   }
 
   // Send the response back to API
-  res.set('Content-type: text/plain');
+  res.set("Content-type: text/plain");
   res.send(response);
 });
