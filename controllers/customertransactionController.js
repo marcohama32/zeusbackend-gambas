@@ -1252,11 +1252,11 @@ exports.getLogedCustomerTransactions = asyncHandler(async (req, res, next) => {
 });
 
 exports.ussd = asyncHandler(async (req, res, next) => {
-  const phoneNumber1 = "+258844232354"
+  const phoneNumber1 = "+258844232354";
   // const result = await User.findOne({ contact1: phoneNumber1 }, "myMembers");
-  
+
   const result = await User.findOne({ contact1: phoneNumber1 }, "myMembers");
-  console.log("Result",result)
+  console.log("Result", result);
 
   const { sessionId, serviceCode, phoneNumber, text } = req.body;
 
@@ -1296,26 +1296,48 @@ exports.ussd = asyncHandler(async (req, res, next) => {
       response = `END Error fetching transactions`;
     }
   } else if (text === "2") {
-    // Business logic for second level response
+    // Business logic for benefits
 
-    // Terminal response
-    response = `END Your phone number is ${phoneNumber}`;
+
+    try {
+      const result = await User.findOne({ contact1: phoneNumber }).populate({
+        path: "plan.planService",
+        select: "serviceName remainingBalance",
+      });
+  
+      if (result) {
+        const plan = result.plan;
+  
+        response = `CON Your Plan Benefits:\n`;
+  
+        for (let index = 0; index < plan.length; index++) {
+          const planService = plan[index].planService;
+          response += `${index + 1}. Service Name: ${planService.serviceName}\n   Remaining Balance: ${planService.remainingBalance}\n\n`;
+        }
+      } else {
+        response = `END Plan Benefits not found for your number`;
+      }
+    } catch (error) {
+      response = `END Error fetching Plan Benefits`;
+    }
+  
   } else if (text === "3") {
     // Terminal response
     response = `CON Select option ?\n
-    1. Generate code
-    2. Get last code
-    *. Back
+    1. Generate new code
+    2. Recover last code
     0. Exit`;
-  } else if (text === "4") {
+  } else if(text == "3*1"){
+    //Business for generate the transaction code
+  }
+   else if (text === "4") {
     // Terminal response
     response = `CON Select option ?\n
     1. My Name
     2. Contacts
-    3. DOB
+    3. Date of birth
     4. MemberShip ID
     5. Dependents
-    *. Back
     0. Exit`;
   } else if (text === "4*1") {
     try {
@@ -1342,7 +1364,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
       if (result) {
         const contact1 = result.contact1;
         const contact2 = result.contact2;
-        response = `END Your contact1 is: ${contact1} contact2 is: ${contact2}`;
+        response = `END Your contacts is ${contact1} and ${contact2}`;
       } else {
         response = `END Contact not found for your account`;
       }
@@ -1369,7 +1391,10 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     }
   } else if (text === "4*4") {
     try {
-      const result = await User.findOne({ contact1: phoneNumber }, "memberShipID");
+      const result = await User.findOne(
+        { contact1: phoneNumber },
+        "memberShipID"
+      );
       if (result) {
         const memberShipID = result.memberShipID;
 
@@ -1380,16 +1405,23 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     } catch (error) {
       response = `END Error fetching MemberShip ID`;
     }
-  }else if (text === "4*5") {
+  } else if (text === "4*5") {
     try {
-      const result = await User.findOne({ contact1: phoneNumber }).populate("myMembers", "firstName lastName memberShipID monthlyFee");
-  
+      const result = await User.findOne({ contact1: phoneNumber }).populate(
+        "myMembers",
+        "firstName lastName memberShipID monthlyFee"
+      );
+
       if (result) {
         response = `CON Your Dependents:\n`;
-  
+
         for (let index = 0; index < result.myMembers.length; index++) {
           const dependent = result.myMembers[index];
-          response += `${index + 1}. Name: ${dependent.firstName}\n   Last Name: ${dependent.lastName}\n   memberShipID: ${dependent.memberShipID}\n   Monthly Fee: ${dependent.monthlyFee}\n\n`;
+          response += `${index + 1}. Name: ${dependent.firstName}\n ${
+            dependent.lastName
+          }\n  memberShipID: ${dependent.memberShipID}\n   Monthly Fee: ${
+            dependent.monthlyFee
+          }\n\n`;
         }
       } else {
         response = `END Dependents not found for your number`;
@@ -1397,7 +1429,9 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     } catch (error) {
       response = `END Error fetching Dependents`;
     }
-  }else if (text === "0") {
+  } else if (text === "4*0") {
+    response = `END Thank you for using Mediplus. Have a nice day!`;
+  } else if (text === "0") {
     // Exit the session
     response = `END Thank you for using Mediplus. Have a nice day!`;
   }
