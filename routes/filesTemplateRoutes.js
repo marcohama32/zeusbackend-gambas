@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { createFileTemplate} = require("../controllers/filesTemplateController");
+const { createFileTemplate, getAllFileTemplates} = require("../controllers/filesTemplateController");
 const { isAuthenticated, isAdmin } = require("../middleware/auth");
 const upload = require("../middleware/upload");
 
@@ -12,5 +12,7 @@ const upload = require("../middleware/upload");
 // router.delete("/admin/user/delete/:id", isAuthenticated, isAdmin, deleteUser);
 
 router.post("/filestemplate/create",upload.single("fileTemplate"), isAuthenticated, isAdmin, createFileTemplate);
+router.get("/get/templates",isAuthenticated, getAllFileTemplates);
+
 
 module.exports = router;
