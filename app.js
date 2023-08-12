@@ -24,7 +24,7 @@ const companyRoutes = require("./routes/companyRoutes");
 const partnerRoutes = require("./routes/partnerRoutes");
 const ctransationRoutes = require("./routes/customertransactionRoutes");
 const chatMessage = require("./routes/chatMessageRoutes");
-const FilesTemplate = require("./routes/filesTemplateRoutes")
+// const FilesTemplate = require("./routes/filesTemplateRoutes")
 const ussd = require("./routes/ussdRoutes")
 
 // Middleware
@@ -79,7 +79,7 @@ app.use("/api", companyRoutes)
 app.use("/api", partnerRoutes)
 app.use("/api", ctransationRoutes)
 app.use("/api", chatMessage)
-app.use("/api", FilesTemplate)
+// app.use("/api", FilesTemplate)
 app.use("/api", ussd)
 
 //error middleware
