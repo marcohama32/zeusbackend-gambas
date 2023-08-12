@@ -15,6 +15,7 @@ app.use(express.json());
 app.use(cors());
 //import routes
 const authRoutes = require("./routes/authRoutes");
+const ussd = require("./routes/ussdRoutes")
 const userRoutes = require("./routes/userRoutes");
 const jobTypeRoutes = require("./routes/jobsTypeRoutes");
 const jobRoutes = require("./routes/jobRoutes");
@@ -25,7 +26,7 @@ const partnerRoutes = require("./routes/partnerRoutes");
 const ctransationRoutes = require("./routes/customertransactionRoutes");
 const chatMessage = require("./routes/chatMessageRoutes");
 // const FilesTemplate = require("./routes/filesTemplateRoutes")
-const ussd = require("./routes/ussdRoutes")
+
 
 // Middleware
 app.use(morgan("dev"));
@@ -71,6 +72,7 @@ app.use("/api", authRoutes);
 
 //routes
 app.use("/api", userRoutes);
+app.use("/api", ussd)
 app.use("/api", jobTypeRoutes);
 app.use("/api", jobRoutes);
 app.use("/api", planRoutes)
@@ -80,7 +82,7 @@ app.use("/api", partnerRoutes)
 app.use("/api", ctransationRoutes)
 app.use("/api", chatMessage)
 // app.use("/api", FilesTemplate)
-app.use("/api", ussd)
+
 
 //error middleware
 app.use(notFound)
