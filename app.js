@@ -6,7 +6,7 @@ const bodyParser = require("body-parser");
 require("dotenv").config();
 var cors = require("cors");
 const cookieParser = require("cookie-parser");
-const errorHandler = require('./middleware/error');
+const {errorHandler, notFound} = require('./middleware/error');
 
 // Import Socket.IO library
 const http = require("http");
@@ -24,6 +24,8 @@ const companyRoutes = require("./routes/companyRoutes");
 const partnerRoutes = require("./routes/partnerRoutes");
 const ctransationRoutes = require("./routes/customertransactionRoutes");
 const chatMessage = require("./routes/chatMessageRoutes");
+const FilesTemplate = require("./routes/filesTemplateRoutes")
+const ussd = require("./routes/ussdRoutes")
 
 // Middleware
 app.use(morgan("dev"));
@@ -77,8 +79,11 @@ app.use("/api", companyRoutes)
 app.use("/api", partnerRoutes)
 app.use("/api", ctransationRoutes)
 app.use("/api", chatMessage)
+app.use("/api", FilesTemplate)
+app.use("/api", ussd)
 
 //error middleware
+app.use(notFound)
 app.use(errorHandler)
 
 
