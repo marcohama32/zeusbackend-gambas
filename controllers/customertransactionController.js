@@ -1304,7 +1304,18 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     *. Back
     0. Exit`;
   } else if(text === "4*1"){
-    response = `END You Name is Marco Hama`;
+    try {
+      const result = await User.findOne({ contact1: phoneNumber }, 'firstName lastName');
+      if (result) {
+        const firstName = result.firstName;
+        const lastName = result.lastName;
+        response = `END Your Name is ${firstName} ${lastName}`;
+      } else {
+        response = `END Name not found for your number`;
+      }
+    } catch (error) {
+      response = `END Error fetching name`;
+    }
   }
   else if(text === "0"){
      // Exit the session
