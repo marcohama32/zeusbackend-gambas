@@ -76,7 +76,7 @@ app.use("/api", FilesTemplate)
 app.use("/api", ussd)
 
 // Error middleware
-app.use(notFound)
+// app.use(notFound)
 app.use(errorHandler)
 
 // Place the additional middleware here
