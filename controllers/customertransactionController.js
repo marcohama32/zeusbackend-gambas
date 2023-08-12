@@ -1252,20 +1252,27 @@ exports.getLogedCustomerTransactions = asyncHandler(async (req, res, next) => {
 });
 
 exports.ussd = asyncHandler(async (req, res, next) => {
+
+  // const contactNumber = "25884232354"; // Replace with the actual contact number you're searching for
+
+  // console.log(user);
+
   const { sessionId, serviceCode, phoneNumber, text } = req.body;
 
   let response ="";
 
   if(text == ``){
     // This is the firt request. Note how we start the response with CON
-    response = `CON what would you want to check ? \n
-    1. My Account
-    2. My phone Number`;
+    response = `CON Wellcome to Mediplus ? \n
+    1. My Transactions
+    2. Benefits
+    3. Get Code
+    4. My Account
+    0. Exit`;
   } else if(text == "1"){
     // Business logic for firt level response
-    response = ` CON Choose account information you want to view
-    1. Account Number
-    2. Account Balance`;
+    const user = await User.find({ contact1: phoneNumber });
+    response = `END You balance is ${user}`
   } else if(text == `2`){
     // Get the mobile number from db
 
@@ -1278,7 +1285,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     response = `END Your account number is ${accountNumber}`
   }else if(`1*2`){
     //Get data from DB
-    const balance = "1.000.00 MT";
+    const balance = "3.000.00 MT";
     //terminal response start END
     response = `END You balance is ${balance}`
   }
