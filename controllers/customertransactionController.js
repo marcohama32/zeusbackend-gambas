@@ -1252,6 +1252,10 @@ exports.getLogedCustomerTransactions = asyncHandler(async (req, res, next) => {
 });
 
 exports.ussd = asyncHandler(async (req, res, next) => {
+  // const phoneNumber1 = "+258844232354"
+  // const result = await User.findOne({ contact1: phoneNumber1 }, "myMembers");
+  // console.log("Resultado",result)
+
   const { sessionId, serviceCode, phoneNumber, text } = req.body;
 
   let response = "";
@@ -1378,26 +1382,15 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     try {
       const result = await User.findOne({ contact1: phoneNumber }, "myMembers");
       if (result) {
-        // const transUser = await Transaction.find(
-        //   { customerId: result._id },
-        //   "invoiceNumber amount transactionStatus"
-        // )
-        //   .limit(10)
-        //   .lean();
-
         response = `CON Your Dependents:\n`;
-        result.forEach((depedent, index) => {
-          response += `${index + 1}. Name: ${
-            depedent.firstName
-          }\n   Last Name: ${depedent.lastName}\n   memberShipID: ${
-            depedent.memberShipID
-          }\n\n`;
+        result.myMembers.forEach((dependent, index) => {
+          response += `${index + 1}. Name: ${dependent.firstName}\n   Last Name: ${dependent.lastName}\n   memberShipID: ${dependent.memberShipID}\n   Monthly Fee: ${dependent.monthlyFee}\n\n`;
         });
       } else {
-        response = `END MemberShip ID not found for your number`;
+        response = `END Dependents not found for your number`;
       }
     } catch (error) {
-      response = `END Error fetching MemberShip ID`;
+      response = `END Error fetching Dependents`;
     }
   }else if (text === "0") {
     // Exit the session
