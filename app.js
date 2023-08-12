@@ -85,7 +85,7 @@ app.use("/api", chatMessage)
 
 
 //error middleware
-app.use(notFound)
+// app.use(notFound)
 app.use(errorHandler)
 
 
