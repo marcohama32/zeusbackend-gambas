@@ -301,12 +301,14 @@ exports.editTransaction1 = asyncHandler(async (req, res, next) => {
 exports.editTransaction = async (req, res) => {
   try {
     const { amount, paymentMethod } = req.body;
-    const transactionId = req.params.id;
+    const transactionId = req.params.transactionId;
 
     const transaction = await Transaction.findById(transactionId);
-
+    // console.log(transaction);
     if (!transaction) {
-      return res.status(404).json({ success: false, error: "Transaction not found" });
+      return res
+        .status(404)
+        .json({ success: false, error: "Transaction not found" });
     }
 
     if (transaction.transactionStatus !== "Pending") {
@@ -316,7 +318,9 @@ exports.editTransaction = async (req, res) => {
       });
     }
 
-    const selectedService = await PlanServices.findById(transaction.serviceIds[0]);
+    const selectedService = await PlanServices.findById(
+      transaction.serviceIds[0]
+    );
 
     if (!selectedService) {
       return res.status(404).json({
@@ -326,11 +330,19 @@ exports.editTransaction = async (req, res) => {
     }
 
     const totalAmountSpent = await Transaction.aggregate([
-      { $match: { customerId: transaction.customerId, serviceIds: transaction.serviceIds[0] } },
+      {
+        $match: {
+          customerId: transaction.customerId,
+          serviceIds: transaction.serviceIds[0],
+        },
+      },
       { $group: { _id: null, totalAmount: { $sum: "$amount" } } },
     ]);
 
-    const availableBalance = selectedService.servicePrice - (totalAmountSpent[0]?.totalAmount || 0) + transaction.amount;
+    const availableBalance =
+      selectedService.servicePrice -
+      (totalAmountSpent[0]?.totalAmount || 0) +
+      transaction.amount;
 
     if (amount > availableBalance) {
       return res.status(400).json({
@@ -354,7 +366,11 @@ exports.editTransaction = async (req, res) => {
 
     await transaction.save();
 
-    res.json({ success: true, remainingBalance: transaction.remainingBalance, transaction });
+    res.json({
+      success: true,
+      remainingBalance: transaction.remainingBalance,
+      transaction,
+    });
   } catch (error) {
     console.error("Error in editTransaction:", error);
     res.status(500).json({ success: false, error: "Something went wrong" });
@@ -473,7 +489,10 @@ exports.getTransactionById = asyncHandler(async (req, res, next) => {
 
     // Find the transaction by transactionID and populate user, plan, and service information
     const transaction = await Transaction.findById(transactionID)
-      .populate("customerId", "firstName lastName email contact1 contact2 address") // Populate user information
+      .populate(
+        "customerId",
+        "firstName lastName email contact1 contact2 address"
+      ) // Populate user information
       .populate({
         path: "planId",
         select: "planName", // Select the fields you want to include from the plan document
@@ -484,15 +503,18 @@ exports.getTransactionById = asyncHandler(async (req, res, next) => {
         },
       })
       .populate({
-        path: 'user',
-        select: 'firstName lastName email profile contact1 contact2',
+        path: "user",
+        select: "firstName lastName email profile contact1 contact2",
         populate: {
-          path: 'partnerUser',
-          model: 'Partner',
-          select: 'partnerName email contact1 contact2 avatar status',
+          path: "partnerUser",
+          model: "Partner",
+          select: "partnerName email contact1 contact2 avatar status",
         },
       })
-      .populate("serviceIds", "serviceName serviceDescription serviceAreaOfCover"); // Populate service information
+      .populate(
+        "serviceIds",
+        "serviceName serviceDescription serviceAreaOfCover"
+      ); // Populate service information
 
     if (!transaction) {
       return res
@@ -565,12 +587,12 @@ exports.createTransaction2 = async (req, res) => {
     const availableBalance = selectedService.servicePrice - totalAmountSpent;
     const remainder = availableBalance - amount;
 
-    console.log("Transaction Amount:", amount);
-    console.log("Available Balance:", availableBalance);
-    console.log("Remainder:", remainder);
+    // console.log("Transaction Amount:", amount);
+    // console.log("Available Balance:", availableBalance);
+    // console.log("Remainder:", remainder);
 
     if (remainder < 0) {
-      console.log("Transaction amount exceeds service price");
+      // console.log("Transaction amount exceeds service price");
       return res.status(400).json({
         success: false,
         error: "Transaction amount exceeds service price",
@@ -734,6 +756,7 @@ exports.createTransaction = async (req, res) => {
         multipleFiles,
         preAuthorization: selectedService.preAuthorization,
         adminApprovalStatus: false,
+        companyPartner: req.user.partnerUser._id,
         user: req.user.id,
       });
       sendNotification(notificationMessage, newTransaction._id);
@@ -759,6 +782,7 @@ exports.createTransaction = async (req, res) => {
         multipleFiles,
         preAuthorization: selectedService.preAuthorization,
         adminApprovalStatus: false,
+        companyPartner: req.user.partnerUser._id,
         user: req.user.id,
       });
 
@@ -864,12 +888,10 @@ exports.approveTransaction = async (req, res) => {
 
     // Check if the transaction is in "Pending" status
     if (transaction.transactionStatus !== "Pending") {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: "Cannot approve a transaction that is not pending",
-        });
+      return res.status(400).json({
+        success: false,
+        error: "Cannot approve a transaction that is not pending",
+      });
     }
 
     // Update the transaction status to "Approved"
@@ -880,13 +902,11 @@ exports.approveTransaction = async (req, res) => {
     const notificationMessage = "Transaction approved";
     sendNotification(notificationMessage, transactionId);
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Transaction approved successfully",
-        transaction,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Transaction approved successfully",
+      transaction,
+    });
   } catch (error) {
     console.error("Error in approveTransaction:", error);
     res.status(500).json({ success: false, error: "Something went wrong" });
@@ -909,17 +929,19 @@ exports.getMyTransactions = asyncHandler(async (req, res, next) => {
     // Add search criteria if searchTerm is provided
     if (searchTerm) {
       query.$or = [
-        { 'customerId.firstName': { $regex: searchTerm, $options: 'i' } },
-        { 'customerId.lastName': { $regex: searchTerm, $options: 'i' } },
-        { invoiceNumber: { $regex: searchTerm, $options: 'i' } },
-        { transactionStatus: { $regex: searchTerm, $options: 'i' } },
-        { 'planId.planName': { $regex: searchTerm, $options: 'i' } },
+        { "customerId.firstName": { $regex: searchTerm, $options: "i" } },
+        { "customerId.lastName": { $regex: searchTerm, $options: "i" } },
+        { invoiceNumber: { $regex: searchTerm, $options: "i" } },
+        { transactionStatus: { $regex: searchTerm, $options: "i" } },
+        { "planId.planName": { $regex: searchTerm, $options: "i" } },
         {
           $and: [
             { serviceIds: { $exists: true, $not: { $size: 0 } } },
             {
               serviceIds: {
-                $elemMatch: { serviceName: { $regex: searchTerm, $options: 'i' } },
+                $elemMatch: {
+                  serviceName: { $regex: searchTerm, $options: "i" },
+                },
               },
             },
           ],
@@ -934,23 +956,23 @@ exports.getMyTransactions = asyncHandler(async (req, res, next) => {
     const transactions = await Transaction.find(query)
       .skip(pageSize * (page - 1))
       .limit(pageSize)
-      .populate('customerId', 'firstName lastName email')
+      .populate("customerId", "firstName lastName email")
       .populate({
-        path: 'planId',
-        select: 'planName',
+        path: "planId",
+        select: "planName",
       })
       .populate({
-        path: 'user',
-        select: 'firstName lastName email profile',
+        path: "user",
+        select: "firstName lastName email profile",
         populate: {
-          path: 'partnerUser',
-          model: 'Partner',
-          select: 'partnerName email contact1 contact2 avatar status',
+          path: "partnerUser",
+          model: "Partner",
+          select: "partnerName email contact1 contact2 avatar status",
         },
       })
       .populate({
-        path: 'serviceIds',
-        select: 'serviceName',
+        path: "serviceIds",
+        select: "serviceName",
       });
 
     // Return the paginated and searched transactions
@@ -967,37 +989,78 @@ exports.getMyTransactions = asyncHandler(async (req, res, next) => {
   }
 });
 
-
-exports.getTransactionByPartnerUserId = async (req, res, next) => {
+exports.getTransactionsByPartnerUser = async (req, res, next) => {
   try {
-    const partnerUserId = req.params.partnerUserId;
+    // Assuming req.user contains the authenticated user's information
+    const partnerCompanyId = req.user.partnerUser._id;
 
-    // Find the transactions that match the partnerUser _id
-    const transactions = await Transaction.find({ "user.partnerUser": partnerUserId })
-      .populate("customerId", "firstName lastName email") // Populate user information
-      .populate({
-        path: "planId",
-        select: "planName", // Select the fields you want to include from the plan document
-        populate: {
-          path: "planService",
-          model: "PlanServices",
-          select: "serviceName servicePrice", // Select the fields you want to include from the planService document
+    // Parse pagination parameters from the request query
+    const pageSize = Number(req.query.pageSize) || 10;
+    const page = Number(req.query.pageNumber) || 1;
+
+    // Parse the search term from the request query
+    const searchTerm = req.query.searchTerm;
+
+    // Create the query object
+    const query = { companyPartner: partnerCompanyId };
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      query.$or = [
+        { "customerId.firstName": { $regex: searchTerm, $options: "i" } },
+        { "customerId.lastName": { $regex: searchTerm, $options: "i" } },
+        { invoiceNumber: { $regex: searchTerm, $options: "i" } },
+        { transactionStatus: { $regex: searchTerm, $options: "i" } },
+        { "planId.planName": { $regex: searchTerm, $options: "i" } },
+        {
+          $and: [
+            { serviceIds: { $exists: true, $not: { $size: 0 } } },
+            {
+              serviceIds: {
+                $elemMatch: {
+                  serviceName: { $regex: searchTerm, $options: "i" },
+                },
+              },
+            },
+          ],
         },
-      })
-      .populate("serviceIds", "serviceName servicePrice"); // Populate service information
-
-    if (!transactions || transactions.length === 0) {
-      return res
-        .status(404)
-        .json({ success: false, error: "Transactions not found for the partnerUser" });
+      ];
     }
 
-    res.status(200).json({ success: true, transactions });
+    // Count the total number of transactions that match the query
+    const totalCount = await Transaction.countDocuments(query);
+
+    // Find transactions with pagination and populate related information
+    const transactions = await Transaction.find(query)
+      .skip(pageSize * (page - 1))
+      .limit(pageSize)
+      .populate("companyPartner", "partnerName contact1 contact2 email")
+      .populate({
+        path: "customerId",
+        select: "firstName lastName email",
+      })
+      .populate({
+        path: "planId",
+        select: "planName",
+      })
+      .populate({
+        path: "serviceIds",
+        select: "serviceName",
+      });
+
+    // Return the paginated and searched transactions
+    res.status(200).json({
+      success: true,
+      count: transactions.length,
+      total: totalCount,
+      pageSize,
+      page,
+      transactions,
+    });
   } catch (error) {
     next(error);
   }
 };
-
 
 exports.deleteFile = async (req, res, next) => {
   try {
@@ -1047,7 +1110,6 @@ exports.deleteFile = async (req, res, next) => {
   }
 };
 
-
 exports.uploadTransactionMultipleFiles = async (req, res, next) => {
   try {
     const id = req.params.id;
@@ -1090,3 +1152,137 @@ exports.uploadTransactionMultipleFiles = async (req, res, next) => {
     });
   }
 };
+
+exports.getLogedPartnetCompany = async (req, res, next) => {
+  // Convert the ObjectId to a string
+  // const partnerCompanyId = req.user.partnerUser._id;
+  // partnerUserId = partnerCompanyId.toString();
+  try {
+    // Retrieve the PartnerCompanyId from the authenticated user object
+    const partnerCompanyId = req.user.partnerUser._id;
+
+    // Convert the ObjectId to a string
+    const partnerCompanyIdStr = partnerCompanyId.toString();
+
+    // Log the retrieved PartnerCompanyId
+    // console.log(partnerCompanyIdStr);
+
+    // Send the PartnerCompanyId as a response to the client
+    res.status(200).json({ partnerCompanyId: partnerCompanyIdStr });
+  } catch (error) {
+    // Handle errors if needed
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+exports.getLogedCustomerTransactions = asyncHandler(async (req, res, next) => {
+  try {
+    // Parse pagination parameters from the request query
+    const pageSize = Number(req.query.pageSize) || 10;
+    const page = Number(req.query.pageNumber) || 1;
+
+    // Parse the search term from the request query
+    const searchTerm = req.query.searchTerm;
+
+    // Create the query object
+    const query = { customerId: req.user.id };
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      query.$or = [
+        { "customerId.firstName": { $regex: searchTerm, $options: "i" } },
+        { "customerId.lastName": { $regex: searchTerm, $options: "i" } },
+        { invoiceNumber: { $regex: searchTerm, $options: "i" } },
+        { transactionStatus: { $regex: searchTerm, $options: "i" } },
+        { "planId.planName": { $regex: searchTerm, $options: "i" } },
+        {
+          $and: [
+            { serviceIds: { $exists: true, $not: { $size: 0 } } },
+            {
+              serviceIds: {
+                $elemMatch: {
+                  serviceName: { $regex: searchTerm, $options: "i" },
+                },
+              },
+            },
+          ],
+        },
+      ];
+    }
+
+    // Count the total number of transactions that match the query
+    const totalCount = await Transaction.countDocuments(query);
+
+    // Find transactions with pagination and populate related information
+    const transactions = await Transaction.find(query)
+      .skip(pageSize * (page - 1))
+      .limit(pageSize)
+      .populate("customerId", "firstName lastName email")
+      .populate({
+        path: "planId",
+        select: "planName",
+      })
+      .populate({
+        path: "user",
+        select: "firstName lastName email profile",
+        populate: {
+          path: "partnerUser",
+          model: "Partner",
+          select: "partnerName email contact1 contact2 avatar status",
+        },
+      })
+      .populate({
+        path: "serviceIds",
+        select: "serviceName",
+      });
+
+    // Return the paginated and searched transactions
+    res.status(200).json({
+      success: true,
+      count: transactions.length,
+      total: totalCount,
+      pageSize,
+      page,
+      transactions,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+exports.ussd = asyncHandler(async (req, res, next) => {
+  const { sessionId, serviceCode, phoneNumber, text } = req.body;
+
+  let response ="";
+
+  if(text == ``){
+    // This is the firt request. Note how we start the response with CON
+    response = `CON what would you want to check ? \n
+    1. My Account
+    2. My phone Number`;
+  } else if(text == "1"){
+    // Business logic for firt level response
+    response = ` CON Choose account information you want to view
+    1. Account Number
+    2. Account Balance`;
+  } else if(text == `2`){
+    // Get the mobile number from db
+
+    //terminal request
+    response = `END You phone number is ${phoneNumber}`
+  }else if(text == `1*1`){
+    const accountNumber = `849904322`
+
+    // terminal request start with END
+    response = `END Your account number is ${accountNumber}`
+  }else if(`1*2`){
+    //Get data from DB
+    const balance = "1.000.00 MT";
+    //terminal response start END
+    response = `END You balance is ${balance}`
+  }
+  //send the response back to API
+  res.set('Content-type: text/plain')
+  res.send(response)
+});
