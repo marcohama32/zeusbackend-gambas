@@ -1272,7 +1272,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
   } else if(text == "1"){
     // Business logic for firt level response
     const user = await User.find({ contact1: phoneNumber });
-    response = `END You balance is ${phoneNumber}`
+    response = `END You balance is ${user}`
   } else if(text == `2`){
     // Get the mobile number from db
 
