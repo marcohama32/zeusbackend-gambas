@@ -6,48 +6,14 @@ const bodyParser = require("body-parser");
 require("dotenv").config();
 var cors = require("cors");
 const cookieParser = require("cookie-parser");
-const { errorHandler, notFound } = require('./middleware/error');
+const errorHandler = require('./middleware/error');
 
 // Import Socket.IO library
 const http = require("http");
 
-// Middleware
-app.use(morgan("dev"));
-app.use(bodyParser.json({ limit: "10mb" }));
-app.use(
-  bodyParser.urlencoded({
-    limit: "10mb",
-    extended: true,
-  })
-);
-app.use(cookieParser());
-
-// Database connection
-mongoose
-  .connect(process.env.DATABASE, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("DB connected"))
-  .catch((err) => console.log(err));
-
-// Serve uploaded files
-app.use('/uploads', express.static('uploads'));
-
-// Enable CORS
+app.use(express.json());
 app.use(cors());
-
-// Import SSE router and use it
-const sseRoutes = require("./routes/sseRoutes");
-app.use("/api", sseRoutes.router);
-
-// Create HTTP server
-const server = http.createServer(app);
-
-// Require and initialize socketHandler after creating the HTTP server
-require("./middleware/socketHandler")(server);
-
-// Import routes
+//import routes
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const jobTypeRoutes = require("./routes/jobsTypeRoutes");
@@ -61,8 +27,50 @@ const chatMessage = require("./routes/chatMessageRoutes");
 const FilesTemplate = require("./routes/filesTemplateRoutes")
 const ussd = require("./routes/ussdRoutes")
 
-// Routes middleware
+
+// Middleware
+app.use(morgan("dev"));
+app.use(bodyParser.json());
+
+// Set the strictQuery option to false
+mongoose.set('strictQuery', false);
+
+// Database connection
+mongoose
+  .connect(process.env.DATABASE, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("DB connected"))
+  .catch((err) => console.log(err));
+
+//middleware
+app.use(morgan("dev"));
+app.use(bodyParser.json({ limit: "10mb" }));
+app.use(
+  bodyParser.urlencoded({
+    limit: "10mb",
+    extended: true,
+  })
+);
+app.use('/uploads',express.static('uploads'))
+app.use(cookieParser())
+app.use(cors());
+
+// Create HTTP server
+const server = http.createServer(app);
+
+// Import SSE router and use it
+const sseRoutes = require("./routes/sseRoutes");
+app.use("/api", sseRoutes.router);
+
+//require socketHandler after create http server
+require("./middleware/socketHandler")(server);
+
+//Routes middleware
 app.use("/api", authRoutes);
+
+//routes
 app.use("/api", userRoutes);
 app.use("/api", jobTypeRoutes);
 app.use("/api", jobRoutes);
@@ -75,16 +83,16 @@ app.use("/api", chatMessage)
 app.use("/api", FilesTemplate)
 app.use("/api", ussd)
 
-// Error middleware
-// app.use(notFound)
+
+//error middleware
 app.use(errorHandler)
 
-// Place the additional middleware here
+
+// Place the middleware here
 app.use((req, res, next) => {
   console.log("Received headers:", req.headers);
   next();
 });
-
 // Port
 const port = process.env.PORT || 8000;
 
