@@ -1301,7 +1301,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     } catch (error) {
       response = `END Error fetching transactions`;
     }
-  } else if (text === "2") {
+  } else if (text.startsWith("2")) {
     try {
       const result = await User.findOne({ contact1: phoneNumber }).populate({
         path: "plan",
@@ -1314,52 +1314,30 @@ exports.ussd = asyncHandler(async (req, res, next) => {
       if (result && result.plan) {
         const plan = result.plan;
         const pageSize = 5;
-        let totalServicesDisplayed = 0;
-  
-        // Get the index of the last displayed service from sessionState
-        let lastServiceIndex = sessionState.lastServiceIndex || 0;
+        const startIndex = parseInt(text.slice(2)) || 0; // Extract start index from input text
   
         let response = `CON Your Plan Services:\n`;
   
         for (let planIndex = 0; planIndex < plan.length; planIndex++) {
           const planService = plan[planIndex].planService;
   
-          for (
-            let serviceIndex = lastServiceIndex;
-            serviceIndex < planService.length;
-            serviceIndex++
-          ) {
+          for (let serviceIndex = startIndex; serviceIndex < planService.length; serviceIndex++) {
             const service = planService[serviceIndex];
-            const serviceNumber = totalServicesDisplayed + 1;
+            const serviceNumber = serviceIndex + 1;
   
             response += `${serviceNumber}. Benefit: ${service.serviceName}\n`;
             response += `   Balance: ${service.remainingBalance}\n\n`;
   
-            totalServicesDisplayed++;
-            lastServiceIndex = serviceIndex;
-  
-            if (totalServicesDisplayed >= pageSize) {
+            if (serviceNumber - startIndex >= pageSize) {
               // Limit reached, provide option to show more
-              response += `${serviceNumber + 1}. Show more\n`;
+              response += `99. Show more\n`;
               break;
             }
           }
   
-          if (totalServicesDisplayed >= pageSize) {
+          if (startIndex + pageSize >= planService.length) {
             break;
           }
-        }
-  
-        if (lastServiceIndex < plan[plan.length - 1].planService.length) {
-          // There are more services to display, set the lastServiceIndex for the next session
-          sessionState.lastServiceIndex = lastServiceIndex + 1;
-        } else {
-          // All services have been displayed
-          sessionState.lastServiceIndex = null;
-        }
-  
-        if (totalServicesDisplayed === 0) {
-          response = `END No Plan Services found for your number`;
         }
   
         // Send the response back to API
