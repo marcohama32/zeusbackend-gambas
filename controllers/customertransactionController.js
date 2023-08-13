@@ -1291,6 +1291,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
       response = `END Error fetching transactions`;
     }
   } else if (text === "2") {
+    // Business logic for Benefits
     try {
       const result = await User.findOne({ contact1: phoneNumber }).populate({
         path: "plan",
@@ -1300,13 +1301,11 @@ exports.ussd = asyncHandler(async (req, res, next) => {
         },
       });
 
-      console.log("Result:", result);
-
       if (result && result.plan) {
         const plan = result.plan;
-        const pageSize = 5;
 
-        response = `CON Your Plan Services:\n`;
+        const responseParts = [];
+        let totalServicesDisplayed = 0;
 
         for (let planIndex = 0; planIndex < plan.length; planIndex++) {
           const planService = plan[planIndex].planService;
@@ -1315,28 +1314,38 @@ exports.ussd = asyncHandler(async (req, res, next) => {
             const service = planService[serviceIndex];
             const serviceNumber = planIndex * pageSize + serviceIndex + 1;
 
-            response += `${serviceNumber}. Benefit: ${service.serviceName}\n`;
-            response += `   Balance: ${service.remainingBalance}\n\n`;
+            const serviceResponse = `Benefit: ${service.serviceName}\n` +
+              `   Balance: ${service.remainingBalance}\n\n`;
 
-            if (serviceNumber % pageSize === 0 && serviceNumber < planService.length) {
-              // Provide option to show more
-              response += `99. Show more\n`;
+            responseParts.push(serviceResponse);
+
+            totalServicesDisplayed++;
+
+            if (totalServicesDisplayed >= pageSize) {
+              // Limit reached, provide option to show more
+              responseParts.push("99. Show more\n");
               break;
             }
           }
+
+          if (totalServicesDisplayed >= pageSize) {
+            break;
+          }
         }
 
-        if (planService.length > pageSize) {
-          response += `0. Exit\n`; // Provide option to exit
-        } else if (planService.length === 0) {
-          response = `END No Plan Services found for your number`;
+        if (totalServicesDisplayed < planService.length) {
+          responseParts.push("0. Exit\n"); // Provide option to exit
+        } else if (totalServicesDisplayed === 0) {
+          responseParts.push("No Plan Services found for your number\n");
         }
+
+        response = "CON Your Plan Services:\n" + responseParts.join("");
       } else {
-        response = `END Plan Services not found for your number`;
+        response = "END Plan Services not found for your number";
       }
     } catch (error) {
       console.error("Error:", error);
-      response = `END Error fetching Plan Benefits`;
+      response = "END Error fetching Plan Benefits";
     }
   } else if (text === "3") {
     // Terminal response
