@@ -1310,6 +1310,8 @@ exports.ussd = asyncHandler(async (req, res, next) => {
 
         response = `CON Your Plan Services:\n`;
 
+        let totalServicesDisplayed = 0; // Initialize the totalServicesDisplayed variable
+
         for (let planIndex = 0; planIndex < plan.length; planIndex++) {
           const planService = plan[planIndex].planService;
 
@@ -1338,6 +1340,15 @@ exports.ussd = asyncHandler(async (req, res, next) => {
           if (totalServicesDisplayed >= pageSize) {
             break;
           }
+        }
+
+        if (lastServiceIndex < planService.length) {
+          // There are more services to display, set the lastServiceIndex for the next session
+          sessionState.lastServiceIndex = lastServiceIndex + 1;
+          response += `99. Show more\n`;
+        } else {
+          // All services have been displayed
+          sessionState.lastServiceIndex = null;
         }
 
         if (totalServicesDisplayed === 0) {
