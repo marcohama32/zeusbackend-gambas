@@ -1256,6 +1256,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
   const { sessionId, serviceCode, phoneNumber, text } = req.body;
 
   let response = "";
+  let sessionState = {}; // Initialize the session state object
 
   if (text === "") {
     // This is the first request. Start the response with CON
@@ -1306,7 +1307,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
         let totalServicesDisplayed = 0;
 
         // Get the index of the last displayed service from sessionState
-        let lastServiceIndex = parseInt(sessionState.lastServiceIndex) || 0;
+        let lastServiceIndex = sessionState.lastServiceIndex || 0;
 
         response = `CON Your Plan Services:\n`;
 
