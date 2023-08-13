@@ -8,8 +8,11 @@ const {
   approveTransaction,
   getMyTransactions,
   deleteFile,
-  editTransaction1,
-  uploadTransactionMultipleFiles
+  editTransaction,
+  uploadTransactionMultipleFiles,
+  getLogedPartnetCompany,
+  getTransactionsByPartnerUser,
+  getLogedCustomerTransactions
 } = require("../controllers/customertransactionController");
 const { isAuthenticated, isAdmin, isPartner } = require("../middleware/auth");
 const {
@@ -58,6 +61,10 @@ router.get(
   );
 
 
-  router.put("/update/transaction/:transactionId", isAuthenticated, editTransaction1);
+  router.put("/update/transaction/:transactionId", isAuthenticated, editTransaction);
+
+  router.get(`/allcompanytransactions`,isAuthenticated, getTransactionsByPartnerUser)
+
+  router.get("/get/logedusertransaction",isAuthenticated,getLogedCustomerTransactions)
 
 module.exports = router;
