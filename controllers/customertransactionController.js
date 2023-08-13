@@ -1314,50 +1314,67 @@ exports.ussd = asyncHandler(async (req, res, next) => {
       if (result && result.plan) {
         const plan = result.plan;
         const pageSize = 5;
-  
-        let response = `CON Your Plan Services:\n`;
+        let totalServicesDisplayed = 0;
   
         // Get the index of the last displayed service from sessionState
         let lastServiceIndex = sessionState.lastServiceIndex || 0;
   
+        let response = `CON Your Plan Services:\n`;
+  
         for (let planIndex = 0; planIndex < plan.length; planIndex++) {
           const planService = plan[planIndex].planService;
   
-          for (let serviceIndex = lastServiceIndex; serviceIndex < planService.length; serviceIndex++) {
+          for (
+            let serviceIndex = lastServiceIndex;
+            serviceIndex < planService.length;
+            serviceIndex++
+          ) {
             const service = planService[serviceIndex];
-            const serviceNumber = serviceIndex + 1;
+            const serviceNumber = totalServicesDisplayed + 1;
   
             response += `${serviceNumber}. Benefit: ${service.serviceName}\n`;
             response += `   Balance: ${service.remainingBalance}\n\n`;
   
-            if (serviceNumber % pageSize === 0 && serviceNumber < planService.length) {
+            totalServicesDisplayed++;
+            lastServiceIndex = serviceIndex;
+  
+            if (totalServicesDisplayed >= pageSize) {
               // Limit reached, provide option to show more
               response += `99. Show more\n`;
-              lastServiceIndex = serviceIndex + 1;
               break;
             }
           }
+  
+          if (totalServicesDisplayed >= pageSize) {
+            break;
+          }
         }
   
-        if (lastServiceIndex >= plan[plan.length - 1].planService.length) {
+        if (lastServiceIndex < plan[plan.length - 1].planService.length) {
+          // There are more services to display, set the lastServiceIndex for the next session
+          sessionState.lastServiceIndex = lastServiceIndex + 1;
+        } else {
           // All services have been displayed
-          response = `END No more Plan Services to show`;
+          sessionState.lastServiceIndex = null;
         }
   
-        // Update sessionState with the lastServiceIndex
-        sessionState.lastServiceIndex = lastServiceIndex;
+        if (totalServicesDisplayed === 0) {
+          response = `END No Plan Services found for your number`;
+        }
   
         // Send the response back to API
-        res.set('Content-type: text/plain');
+        res.set("Content-type: text/plain");
         res.send(response);
   
       } else {
         response = `END Plan Services not found for your number`;
+        res.set("Content-type: text/plain");
+        res.send(response);
       }
     } catch (error) {
       console.error("Error:", error);
       response = `END Error fetching Plan Benefits`;
-      res.set('Content-type: text/plain');
+      res.set("Content-type: text/plain");
       res.send(response);
     }
   } else if (text === "3") {
