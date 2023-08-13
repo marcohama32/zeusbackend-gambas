@@ -1372,7 +1372,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
         const plan = result.plan;
     
         response = `CON Your Plan Services:\n`;
-        const pageSize = 7;
+        const pageSize = 5;
         let totalServicesDisplayed = 0;
     
         for (let planIndex = 0; planIndex < plan.length; planIndex++) {
