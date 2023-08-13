@@ -1301,7 +1301,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     } catch (error) {
       response = `END Error fetching transactions`;
     }
-  } else if (text.startsWith("2")) {
+  } else if (text === "2") {
     try {
       const result = await User.findOne({ contact1: phoneNumber }).populate({
         path: "plan",
@@ -1314,31 +1314,38 @@ exports.ussd = asyncHandler(async (req, res, next) => {
       if (result && result.plan) {
         const plan = result.plan;
         const pageSize = 5;
-        const startIndex = parseInt(text.split("*")[1]) || 0; // Extract start index from input text
+  
+        // Get the current page from sessionState
+        let currentPage = parseInt(sessionState.currentPage) || 1;
   
         let response = `CON Your Plan Services:\n`;
+  
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
   
         for (let planIndex = 0; planIndex < plan.length; planIndex++) {
           const planService = plan[planIndex].planService;
   
-          for (let serviceIndex = startIndex; serviceIndex < planService.length; serviceIndex++) {
+          for (let serviceIndex = startIndex; serviceIndex < endIndex && serviceIndex < planService.length; serviceIndex++) {
             const service = planService[serviceIndex];
             const serviceNumber = serviceIndex + 1;
   
             response += `${serviceNumber}. Benefit: ${service.serviceName}\n`;
             response += `   Balance: ${service.remainingBalance}\n\n`;
-  
-            if (serviceNumber - startIndex >= pageSize) {
-              // Limit reached, provide option to show more
-              response += `99. Show more\n`;
-              break;
-            }
           }
   
-          if (startIndex + pageSize >= planService.length) {
+          if (endIndex >= planService.length) {
             break;
           }
         }
+  
+        // Provide option to show more if there are more services
+        if (endIndex < plan[0].planService.length) {
+          response += `99. Show more\n`;
+        }
+  
+        // Increment the current page in sessionState
+        sessionState.currentPage = currentPage + 1;
   
         // Send the response back to API
         res.set("Content-type: text/plain");
@@ -1356,6 +1363,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
       res.send(response);
     }
   }
+  
    else if (text === "3") {
     // Terminal response
     response = `CON Select option ?\n
