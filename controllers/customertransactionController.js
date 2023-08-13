@@ -1304,13 +1304,15 @@ exports.ussd = asyncHandler(async (req, res, next) => {
       if (result && result.plan) {
         const plan = result.plan;
 
-        const responseParts = [];
         let totalServicesDisplayed = 0;
+        let lastServiceIndex = parseInt(sessionState.lastServiceIndex) || 0;
+
+        const responseParts = [];
 
         for (let planIndex = 0; planIndex < plan.length; planIndex++) {
           const planService = plan[planIndex].planService;
 
-          for (let serviceIndex = 0; serviceIndex < planService.length; serviceIndex++) {
+          for (let serviceIndex = lastServiceIndex; serviceIndex < planService.length; serviceIndex++) {
             const service = planService[serviceIndex];
             const serviceNumber = planIndex * pageSize + serviceIndex + 1;
 
@@ -1320,9 +1322,9 @@ exports.ussd = asyncHandler(async (req, res, next) => {
             responseParts.push(serviceResponse);
 
             totalServicesDisplayed++;
+            lastServiceIndex = serviceIndex;
 
             if (totalServicesDisplayed >= pageSize) {
-              // Limit reached, provide option to show more
               responseParts.push("99. Show more\n");
               break;
             }
@@ -1333,13 +1335,17 @@ exports.ussd = asyncHandler(async (req, res, next) => {
           }
         }
 
-        if (totalServicesDisplayed < planService.length) {
-          responseParts.push("0. Exit\n"); // Provide option to exit
-        } else if (totalServicesDisplayed === 0) {
-          responseParts.push("No Plan Services found for your number\n");
+        if (lastServiceIndex < plan[plan.length - 1].planService.length) {
+          sessionState.lastServiceIndex = lastServiceIndex + 1;
+        } else {
+          sessionState.lastServiceIndex = null;
         }
 
-        response = "CON Your Plan Services:\n" + responseParts.join("");
+        if (responseParts.length > 0) {
+          response = "CON Your Plan Services:\n" + responseParts.join("");
+        } else {
+          response = "END No Plan Services found for your number";
+        }
       } else {
         response = "END Plan Services not found for your number";
       }
