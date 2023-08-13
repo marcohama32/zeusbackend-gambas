@@ -1304,7 +1304,6 @@ exports.ussd = asyncHandler(async (req, res, next) => {
       if (result && result.plan) {
         const plan = result.plan;
         const pageSize = 5;
-        let totalServicesDisplayed = 0;
 
         // Get the index of the last displayed service from sessionState
         let lastServiceIndex = sessionState.lastServiceIndex || 0;
@@ -1331,6 +1330,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
             if (totalServicesDisplayed >= pageSize) {
               // Limit reached, provide option to show more
               response += `99. Show more\n`;
+              sessionState.lastServiceIndex = lastServiceIndex + 1; // Update the session state
               break;
             }
           }
@@ -1338,14 +1338,6 @@ exports.ussd = asyncHandler(async (req, res, next) => {
           if (totalServicesDisplayed >= pageSize) {
             break;
           }
-        }
-
-        if (lastServiceIndex < plan[plan.length - 1].planService.length) {
-          // There are more services to display, set the lastServiceIndex for the next session
-          sessionState.lastServiceIndex = lastServiceIndex + 1;
-        } else {
-          // All services have been displayed
-          sessionState.lastServiceIndex = null;
         }
 
         if (totalServicesDisplayed === 0) {
@@ -1358,7 +1350,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
       console.error("Error:", error);
       response = `END Error fetching Plan Benefits`;
     }
-  }  else if (text === "3") {
+  }   else if (text === "3") {
     // Terminal response
     response = `CON Select option ?\n
     1. Generate new code
