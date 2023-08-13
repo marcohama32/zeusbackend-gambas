@@ -1315,8 +1315,6 @@ exports.ussd = asyncHandler(async (req, res, next) => {
         const plan = result.plan;
         const pageSize = 5;
         let totalServicesDisplayed = 0;
-  
-        // Get the index of the last displayed service from sessionState
         let lastServiceIndex = sessionState.lastServiceIndex || 0;
   
         let response = `CON Your Plan Services:\n`;
@@ -1339,13 +1337,13 @@ exports.ussd = asyncHandler(async (req, res, next) => {
             lastServiceIndex = serviceIndex;
   
             if (totalServicesDisplayed >= pageSize) {
-              // Limit reached, provide option to show more
-              response += `99. Show more\n`;
               break;
             }
           }
   
           if (totalServicesDisplayed >= pageSize) {
+            // Limit reached, provide option to show more
+            response += `99. Show more\n`;
             break;
           }
         }
