@@ -1333,17 +1333,35 @@ exports.ussd = asyncHandler(async (req, res, next) => {
       if (result && result.plan) {
         const plan = result.plan;
   
-        response = `CON Your Plan Services:\n`;
+        let response = `CON Your Plan Services:\n`;
+        const pageSize = 9;
+        let totalServicesDisplayed = 0;
   
-        for (let index = 0; index < plan.length; index++) {
-          const planService = plan[index].planService;
-          response += `${index + 1}. Plan Name: ${plan.planName}\n`;
+        for (let planIndex = 0; planIndex < plan.length; planIndex++) {
+          const planService = plan[planIndex].planService;
   
           for (let serviceIndex = 0; serviceIndex < planService.length; serviceIndex++) {
             const service = planService[serviceIndex];
-            response += `   ${serviceIndex + 1}. Service Name: ${service.serviceName}\n`;
-            response += `   Remaining Balance: ${service.remainingBalance}\n`;
+            response += `${planIndex * pageSize + serviceIndex + 1}. Plan: ${plan.planName}\n`;
+            response += `   Benefit: ${service.serviceName}\n`;
+            response += `   Balance: ${service.remainingBalance}\n\n`;
+  
+            totalServicesDisplayed++;
+  
+            if (totalServicesDisplayed >= pageSize) {
+              // Limit reached, provide option to show more
+              response += `99. Show more\n`;
+              break;
+            }
           }
+  
+          if (totalServicesDisplayed >= pageSize) {
+            break;
+          }
+        }
+  
+        if (totalServicesDisplayed === 0) {
+          response = `END No Plan Services found for your number`;
         }
       } else {
         response = `END Plan Services not found for your number`;
