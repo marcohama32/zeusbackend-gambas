@@ -1252,12 +1252,35 @@ exports.getLogedCustomerTransactions = asyncHandler(async (req, res, next) => {
 });
 
 exports.ussd = asyncHandler(async (req, res, next) => {
-  const phoneNumber1 = "+258844232354";
-  // const result = await User.findOne({ contact1: phoneNumber1 }, "myMembers");
+//   const phoneNumber1 = "+258844232354";
+//   // const result = await User.findOne({ contact1: phoneNumber1 }, "myMembers");
+//   const userId = '64c6eccfca6d28fbfacd57eb';
+//   const user = await User.findById(userId)
+//   .populate({
+//     path: 'plan',
+//     populate: {
+//       path: 'planService',
+//       model: 'PlanServices', // Replace with the correct model name for PlanServices
+//     },
+//   })
+//   .exec();
 
-  const result = await User.findOne({ contact1: phoneNumber1 }, "myMembers");
-  console.log("Result", result);
+//   // Iterate through each plan in the user's plan array
+// user.plan.forEach(plan => {
+//   console.log('Plan Name:', plan.planName);
+//   console.log('Area of Cover:', plan.areaOfCover);
+//   console.log('Plan Description:', plan.planDescription);
+//   console.log('Plan Total Balance:', plan.planTotalBalance);
+  
+//   // Iterate through each planService in the plan's planService array
+//   plan.planService.forEach(service => {
+//     console.log('Service Name:', service.serviceName); // Replace with the correct property name
+//     console.log('Remaining Balance:', service.remainingBalance); // Replace with the correct property name
+//     console.log('---');
+//   });
 
+//   console.log('================================');
+// })
   const { sessionId, serviceCode, phoneNumber, text } = req.body;
 
   let response = "";
@@ -1314,7 +1337,17 @@ exports.ussd = asyncHandler(async (req, res, next) => {
   
         for (let index = 0; index < plan.length; index++) {
           const planService = plan[index].planService;
-          response += `${index + 1}. Service Name: ${planService.serviceName}\n   Remaining Balance: ${planService.remainingBalance}\n\n`;
+          response += `${index + 1}. Plan Name: ${plan.planName}\n`;
+          response += `   Area of Cover: ${plan.areaOfCover}\n`;
+          response += `   Plan Description: ${plan.planDescription}\n`;
+          response += `   Plan Total Balance: ${plan.planTotalBalance}\n`;
+  
+          for (let serviceIndex = 0; serviceIndex < planService.length; serviceIndex++) {
+            const service = planService[serviceIndex];
+            response += `   Service Name: ${service.serviceName}\n`;
+            response += `   Remaining Balance: ${service.remainingBalance}\n`;
+            response += `   ---\n`;
+          }
         }
       } else {
         response = `END Plan Services not found for your number`;
