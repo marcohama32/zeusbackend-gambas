@@ -1343,7 +1343,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
   
           if (totalServicesDisplayed >= pageSize) {
             // Limit reached, provide option to show more
-            response += `99. Show more\n`;
+            response += `6. Show more\n`;
             break;
           }
         }
