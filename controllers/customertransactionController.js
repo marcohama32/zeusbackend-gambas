@@ -1354,12 +1354,12 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     } catch (error) {
       response = `END Error fetching transactions`;
     }
-  } else if (text === "2") {
+  }else if (text === "2") {
     // Business logic for benefits
-
+  
     try {
-      // const phoneNumber1 = "+258844232354";
-      const result = await User.findOne({ contact1: phoneNumber }).populate({
+      const phoneNumber1 = "+258844232354";
+      const result = await User.findOne({ contact1: phoneNumber1 }).populate({
         path: "plan",
         populate: {
           path: "planService",
@@ -1367,37 +1367,49 @@ exports.ussd = asyncHandler(async (req, res, next) => {
         },
       });
   
-    
       if (result && result.plan) {
         const plan = result.plan;
-    
-        response = `CON Your Plan Services:\n`;
         const pageSize = 5;
         let totalServicesDisplayed = 0;
-    
+  
+        // Get the index of the last displayed service from sessionState
+        let lastServiceIndex = parseInt(sessionState.lastServiceIndex) || 0;
+  
+        let response = `CON Your Plan Services:\n`;
+  
         for (let planIndex = 0; planIndex < plan.length; planIndex++) {
           const planService = plan[planIndex].planService;
   
-    
-          for (let serviceIndex = 0; serviceIndex < planService.length; serviceIndex++) {
+          for (let serviceIndex = lastServiceIndex; serviceIndex < planService.length; serviceIndex++) {
             const service = planService[serviceIndex];
-            response += `${totalServicesDisplayed + 1}. Benefit: ${service.serviceName}\n`;
+            const serviceNumber = totalServicesDisplayed + 1;
+  
+            response += `${serviceNumber}. Benefit: ${service.serviceName}\n`;
             response += `   Balance: ${service.remainingBalance}\n\n`;
-        
+  
             totalServicesDisplayed++;
-    
+            lastServiceIndex = serviceIndex;
+  
             if (totalServicesDisplayed >= pageSize) {
               // Limit reached, provide option to show more
               response += `99. Show more\n`;
               break;
             }
           }
-    
+  
           if (totalServicesDisplayed >= pageSize) {
             break;
           }
         }
-    
+  
+        if (lastServiceIndex < plan[plan.length - 1].planService.length) {
+          // There are more services to display, set the lastServiceIndex for the next session
+          sessionState.lastServiceIndex = lastServiceIndex + 1;
+        } else {
+          // All services have been displayed
+          sessionState.lastServiceIndex = null;
+        }
+  
         if (totalServicesDisplayed === 0) {
           response = `END No Plan Services found for your number`;
         }
@@ -1405,13 +1417,16 @@ exports.ussd = asyncHandler(async (req, res, next) => {
         response = `END Plan Services not found for your number`;
       }
   
-      
+      // Send the response back to API
+      res.set('Content-type: text/plain');
+      res.send(response);
+  
     } catch (error) {
       console.error("Error:", error);
       response = `END Error fetching Plan Benefits`;
+      res.set('Content-type: text/plain');
+      res.send(response);
     }
-  
-  
   } else if (text === "3") {
     // Terminal response
     response = `CON Select option ?\n
