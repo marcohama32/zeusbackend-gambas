@@ -1314,7 +1314,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
       if (result && result.plan) {
         const plan = result.plan;
         const pageSize = 5;
-        const startIndex = parseInt(text.slice(2)) || 0; // Extract start index from input text
+        const startIndex = parseInt(text.split("*")[1]) || 0; // Extract start index from input text
   
         let response = `CON Your Plan Services:\n`;
   
@@ -1355,7 +1355,8 @@ exports.ussd = asyncHandler(async (req, res, next) => {
       res.set("Content-type: text/plain");
       res.send(response);
     }
-  } else if (text === "3") {
+  }
+   else if (text === "3") {
     // Terminal response
     response = `CON Select option ?\n
     1. Generate new code
