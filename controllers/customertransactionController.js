@@ -1300,6 +1300,8 @@ exports.ussd = asyncHandler(async (req, res, next) => {
         },
       });
 
+      console.log("Result:", result);
+
       if (result && result.plan) {
         const plan = result.plan;
         const pageSize = 5;
@@ -1309,21 +1311,14 @@ exports.ussd = asyncHandler(async (req, res, next) => {
         for (let planIndex = 0; planIndex < plan.length; planIndex++) {
           const planService = plan[planIndex].planService;
 
-          for (
-            let serviceIndex = 0;
-            serviceIndex < planService.length;
-            serviceIndex++
-          ) {
+          for (let serviceIndex = 0; serviceIndex < planService.length; serviceIndex++) {
             const service = planService[serviceIndex];
             const serviceNumber = planIndex * pageSize + serviceIndex + 1;
 
             response += `${serviceNumber}. Benefit: ${service.serviceName}\n`;
             response += `   Balance: ${service.remainingBalance}\n\n`;
 
-            if (
-              serviceNumber % pageSize === 0 &&
-              serviceNumber < planService.length
-            ) {
+            if (serviceNumber % pageSize === 0 && serviceNumber < planService.length) {
               // Provide option to show more
               response += `99. Show more\n`;
               break;
