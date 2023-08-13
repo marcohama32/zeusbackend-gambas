@@ -1252,6 +1252,17 @@ exports.getLogedCustomerTransactions = asyncHandler(async (req, res, next) => {
 });
 
 exports.ussd = asyncHandler(async (req, res, next) => {
+  const phoneNumber1 = ""
+
+  const result = await User.findOne({ contact1: phoneNumber1 }).populate({
+    path: "plan",
+    populate: {
+      path: "planService",
+      select: "serviceName remainingBalance",
+    },
+  });
+  
+  console.log("Result:", result);
   const { sessionId, serviceCode, phoneNumber, text } = req.body;
 
   let response = "";
@@ -1291,7 +1302,6 @@ exports.ussd = asyncHandler(async (req, res, next) => {
       response = `END Error fetching transactions`;
     }
   } else if (text === "2") {
-    // Business logic for Benefits
     try {
       const result = await User.findOne({ contact1: phoneNumber }).populate({
         path: "plan",
@@ -1303,29 +1313,34 @@ exports.ussd = asyncHandler(async (req, res, next) => {
 
       if (result && result.plan) {
         const plan = result.plan;
-
+        const pageSize = 5;
         let totalServicesDisplayed = 0;
-        let lastServiceIndex = parseInt(sessionState.lastServiceIndex) || 0;
 
-        const responseParts = [];
+        // Get the index of the last displayed service from sessionState
+        let lastServiceIndex = sessionState.lastServiceIndex || 0;
+
+        response = `CON Your Plan Services:\n`;
 
         for (let planIndex = 0; planIndex < plan.length; planIndex++) {
           const planService = plan[planIndex].planService;
 
-          for (let serviceIndex = lastServiceIndex; serviceIndex < planService.length; serviceIndex++) {
+          for (
+            let serviceIndex = lastServiceIndex;
+            serviceIndex < planService.length;
+            serviceIndex++
+          ) {
             const service = planService[serviceIndex];
-            const serviceNumber = planIndex * pageSize + serviceIndex + 1;
+            const serviceNumber = totalServicesDisplayed + 1;
 
-            const serviceResponse = `Benefit: ${service.serviceName}\n` +
-              `   Balance: ${service.remainingBalance}\n\n`;
-
-            responseParts.push(serviceResponse);
+            response += `${serviceNumber}. Benefit: ${service.serviceName}\n`;
+            response += `   Balance: ${service.remainingBalance}\n\n`;
 
             totalServicesDisplayed++;
             lastServiceIndex = serviceIndex;
 
             if (totalServicesDisplayed >= pageSize) {
-              responseParts.push("99. Show more\n");
+              // Limit reached, provide option to show more
+              response += `99. Show more\n`;
               break;
             }
           }
@@ -1336,22 +1351,22 @@ exports.ussd = asyncHandler(async (req, res, next) => {
         }
 
         if (lastServiceIndex < plan[plan.length - 1].planService.length) {
+          // There are more services to display, set the lastServiceIndex for the next session
           sessionState.lastServiceIndex = lastServiceIndex + 1;
         } else {
+          // All services have been displayed
           sessionState.lastServiceIndex = null;
         }
 
-        if (responseParts.length > 0) {
-          response = "CON Your Plan Services:\n" + responseParts.join("");
-        } else {
-          response = "END No Plan Services found for your number";
+        if (totalServicesDisplayed === 0) {
+          response = `END No Plan Services found for your number`;
         }
       } else {
-        response = "END Plan Services not found for your number";
+        response = `END Plan Services not found for your number`;
       }
     } catch (error) {
       console.error("Error:", error);
-      response = "END Error fetching Plan Benefits";
+      response = `END Error fetching Plan Benefits`;
     }
   } else if (text === "3") {
     // Terminal response
