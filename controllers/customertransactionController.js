@@ -1338,15 +1338,11 @@ exports.ussd = asyncHandler(async (req, res, next) => {
         for (let index = 0; index < plan.length; index++) {
           const planService = plan[index].planService;
           response += `${index + 1}. Plan Name: ${plan.planName}\n`;
-          response += `   Area of Cover: ${plan.areaOfCover}\n`;
-          response += `   Plan Description: ${plan.planDescription}\n`;
-          response += `   Plan Total Balance: ${plan.planTotalBalance}\n`;
   
           for (let serviceIndex = 0; serviceIndex < planService.length; serviceIndex++) {
             const service = planService[serviceIndex];
-            response += `   Service Name: ${service.serviceName}\n`;
+            response += `   ${serviceIndex + 1}. Service Name: ${service.serviceName}\n`;
             response += `   Remaining Balance: ${service.remainingBalance}\n`;
-            response += `   ---\n`;
           }
         }
       } else {
