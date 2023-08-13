@@ -1366,8 +1366,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
           select: "serviceName remainingBalance",
         },
       });
-    
-      console.log("Result:", result);
+  
     
       if (result && result.plan) {
         const plan = result.plan;
@@ -1378,15 +1377,13 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     
         for (let planIndex = 0; planIndex < plan.length; planIndex++) {
           const planService = plan[planIndex].planService;
-    
-          console.log(`Displaying services for Plan: ${plan[planIndex].planName}`);
+  
     
           for (let serviceIndex = 0; serviceIndex < planService.length; serviceIndex++) {
             const service = planService[serviceIndex];
-          
-            response += `   Service Name: ${service.serviceName}\n`;
-            response += `   Remaining Balance: ${service.remainingBalance}\n\n`;
-    
+            response += `${totalServicesDisplayed + 1}. Benefit: ${service.serviceName}\n`;
+            response += `   Balance: ${service.remainingBalance}\n\n`;
+        
             totalServicesDisplayed++;
     
             if (totalServicesDisplayed >= pageSize) {
@@ -1407,8 +1404,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
       } else {
         response = `END Plan Services not found for your number`;
       }
-    
-      console.log("Response:", response);
+  
       
     } catch (error) {
       console.error("Error:", error);
