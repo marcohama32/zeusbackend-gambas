@@ -1252,7 +1252,6 @@ exports.getLogedCustomerTransactions = asyncHandler(async (req, res, next) => {
 });
 
 exports.ussd = asyncHandler(async (req, res, next) => {
-
   const { sessionId, serviceCode, phoneNumber, text } = req.body;
 
   let response = "";
@@ -1291,7 +1290,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
     } catch (error) {
       response = `END Error fetching transactions`;
     }
-  }else if (text === "2") {
+  } else if (text === "2") {
     try {
       const result = await User.findOne({ contact1: phoneNumber }).populate({
         path: "plan",
@@ -1305,53 +1304,36 @@ exports.ussd = asyncHandler(async (req, res, next) => {
         const plan = result.plan;
         const pageSize = 5;
 
-        // Get the index of the last displayed service from sessionState
-        let lastServiceIndex = sessionState.lastServiceIndex || 0;
-
         response = `CON Your Plan Services:\n`;
-
-        let totalServicesDisplayed = 0; // Initialize the totalServicesDisplayed variable
 
         for (let planIndex = 0; planIndex < plan.length; planIndex++) {
           const planService = plan[planIndex].planService;
 
           for (
-            let serviceIndex = lastServiceIndex;
+            let serviceIndex = 0;
             serviceIndex < planService.length;
             serviceIndex++
           ) {
             const service = planService[serviceIndex];
-            const serviceNumber = totalServicesDisplayed + 1;
+            const serviceNumber = planIndex * pageSize + serviceIndex + 1;
 
             response += `${serviceNumber}. Benefit: ${service.serviceName}\n`;
             response += `   Balance: ${service.remainingBalance}\n\n`;
 
-            totalServicesDisplayed++;
-            lastServiceIndex = serviceIndex;
-
-            if (totalServicesDisplayed >= pageSize) {
-              // Limit reached, provide option to show more
+            if (
+              serviceNumber % pageSize === 0 &&
+              serviceNumber < planService.length
+            ) {
+              // Provide option to show more
               response += `99. Show more\n`;
-              sessionState.lastServiceIndex = lastServiceIndex + 1; // Update the session state
               break;
             }
           }
-
-          if (totalServicesDisplayed >= pageSize) {
-            break;
-          }
         }
 
-        if (lastServiceIndex < planService.length) {
-          // There are more services to display, set the lastServiceIndex for the next session
-          sessionState.lastServiceIndex = lastServiceIndex + 1;
-          response += `99. Show more\n`;
-        } else {
-          // All services have been displayed
-          sessionState.lastServiceIndex = null;
-        }
-
-        if (totalServicesDisplayed === 0) {
+        if (planService.length > pageSize) {
+          response += `0. Exit\n`; // Provide option to exit
+        } else if (planService.length === 0) {
           response = `END No Plan Services found for your number`;
         }
       } else {
@@ -1361,16 +1343,15 @@ exports.ussd = asyncHandler(async (req, res, next) => {
       console.error("Error:", error);
       response = `END Error fetching Plan Benefits`;
     }
-  }   else if (text === "3") {
+  } else if (text === "3") {
     // Terminal response
     response = `CON Select option ?\n
     1. Generate new code
     2. Recover last code
     0. Exit`;
-  } else if(text == "3*1"){
+  } else if (text == "3*1") {
     //Business for generate the transaction code
-  }
-   else if (text === "4") {
+  } else if (text === "4") {
     // Terminal response
     response = `CON Select option ?\n
     1. My Name
