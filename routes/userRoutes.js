@@ -70,7 +70,7 @@ router.get("/allusers", isAuthenticated, allUsers);
 router.get("/allcustomers", isAuthenticated, allCustomersUsers);
 router.put("/user/edit/:id", upload.single("avatar"), editUser);
 router.put("/user/inactive/:id", isAuthenticated, desactiveUser);
-router.get("/user/:id", isAuthenticated,isPartner, singleUser);
+router.get("/user/:id", isAuthenticated, singleUser);
 router.delete("/admin/user/delete/:id", isAuthenticated, isAdmin, deleteUser);
 router.post(
   "/user/jobhistory",
