@@ -18,5 +18,8 @@ module.exports = (server) => {
     socket.on("disconnect", () => {
       console.log("User disconnected");
     });
+
+    // Return the io instance
+    return io;
   });
 };

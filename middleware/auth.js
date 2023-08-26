@@ -49,3 +49,51 @@ exports.isPartner = (req, res, next) => {
   }
   next();
 };
+
+
+exports.isTokenValid = async (req, res, next) => {
+  try {
+    const token = req.headers.token;
+
+    // Check if token exists
+    if (!token) {
+      throw new Error("Token not provided");
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Retrieve user from the database
+    const user = await User.findById(decoded.id);
+
+    // Check if the user exists
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Check if the token has expired
+    const resetPasswordExpiresMilliseconds = new Date(user.resetPasswordExpires).getTime();
+    const currentTimeMilliseconds = Date.now() / 1000;
+    
+    if (resetPasswordExpiresMilliseconds < currentTimeMilliseconds) {
+
+      throw new Error("Reset token expired");
+      // You can handle the token expiration here
+    }
+
+    // Attach the user to the request object for later use
+    req.user = user;
+
+    // console.log("User: ", req.user);
+
+    // If all checks pass, move on to the next middleware
+    // next();
+    if(req.user){
+      return res.status(200).json({ success: true, message: "token is valid" });
+    }
+  } catch (error) {
+    // Handle errors in a centralized error handler or middleware
+    // You can send a more descriptive error message if needed
+    return res.status(401).json({ success: false, message: "Authentication failed" });
+  }
+};
