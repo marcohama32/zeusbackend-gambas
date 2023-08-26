@@ -1,4 +1,3 @@
-const Service = require("../models/notaplicableplanService");
 const Plan = require("../models/planModel");
 const PlanService = require("../models/serviceModel");
 const ErrorResponse = require("../utils/errorResponse");

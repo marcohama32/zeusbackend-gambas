@@ -377,11 +377,64 @@ exports.editTransaction = async (req, res) => {
   }
 };
 
+// exports.getAllTransactions = asyncHandler(async (req, res, next) => {
+//   try {
+//     const pageSize = Number(req.query.pageSize) || 10;
+//     const page = Number(req.query.pageNumber) || 1;
+//     const searchTerm = req.query.searchTerm;
+
+//     // Create the query object
+//     const query = {};
+
+//     // Add search criteria if searchTerm is provided
+//     if (searchTerm) {
+//       query.$or = [
+//         { transactionId: { $regex: searchTerm, $options: "i" } },
+//         { paymentMethod: { $regex: searchTerm, $options: "i" } },
+//       ];
+//     }
+
+//     // Calculate the total count of transactions matching the query
+//     const totalCount = await Transaction.countDocuments(query);
+
+//     // Find transactions with pagination and populate user, plan, and service information
+//     const transactions = await Transaction.find(query)
+//       .skip(pageSize * (page - 1))
+//       .limit(pageSize)
+//       .populate("customerId", "firstName lastName email") // Populate user information
+//       .populate({
+//         path: "planId",
+//         select: "planName", // Select the fields you want to include from the plan document
+//         populate: {
+//           path: "planService",
+//           model: "PlanServices",
+//           select: "serviceName servicePrice", // Select the fields you want to include from the planService document
+//         },
+//       })
+//       .populate("serviceIds", "serviceName servicePrice"); // Populate service information
+
+//     res.status(200).json({
+//       success: true,
+//       count: transactions.length,
+//       total: totalCount,
+//       pageSize,
+//       page,
+//       transactions,
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// });
+
 exports.getAllTransactions = asyncHandler(async (req, res, next) => {
   try {
     const pageSize = Number(req.query.pageSize) || 10;
     const page = Number(req.query.pageNumber) || 1;
     const searchTerm = req.query.searchTerm;
+    
+    // Parse the date range parameters from the request query
+    const startDate = req.query.startDate; // Format: YYYY-MM-DD
+    const endDate = req.query.endDate; // Format: YYYY-MM-DD
 
     // Create the query object
     const query = {};
@@ -392,6 +445,14 @@ exports.getAllTransactions = asyncHandler(async (req, res, next) => {
         { transactionId: { $regex: searchTerm, $options: "i" } },
         { paymentMethod: { $regex: searchTerm, $options: "i" } },
       ];
+    }
+
+    // Add date range criteria if both startDate and endDate are provided
+    if (startDate && endDate) {
+      query.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate + "T23:59:59.999Z"), // Consider the end of the provided endDate
+      };
     }
 
     // Calculate the total count of transactions matching the query
@@ -425,6 +486,7 @@ exports.getAllTransactions = asyncHandler(async (req, res, next) => {
     next(error);
   }
 });
+
 
 exports.getTransactionsByCustomerId = asyncHandler(async (req, res, next) => {
   try {
@@ -874,6 +936,7 @@ exports.revokeTransaction = async (req, res) => {
 // controllers/transactionController.js
 
 exports.approveTransaction = async (req, res) => {
+
   try {
     const { transactionId } = req.params;
 
@@ -895,7 +958,7 @@ exports.approveTransaction = async (req, res) => {
     }
 
     // Update the transaction status to "Approved"
-    transaction.transactionStatus = "Approved";
+    transaction.transactionStatus = "Completed";
     await transaction.save();
 
     // Send notification for transaction approval
@@ -914,6 +977,81 @@ exports.approveTransaction = async (req, res) => {
 };
 
 //get my transactions
+// exports.getMyTransactions = asyncHandler(async (req, res, next) => {
+//   try {
+//     // Parse pagination parameters from the request query
+//     const pageSize = Number(req.query.pageSize) || 10;
+//     const page = Number(req.query.pageNumber) || 1;
+
+//     // Parse the search term from the request query
+//     const searchTerm = req.query.searchTerm;
+
+//     // Create the query object
+//     const query = { user: req.user.id };
+
+//     // Add search criteria if searchTerm is provided
+//     if (searchTerm) {
+//       query.$or = [
+//         { "customerId.firstName": { $regex: searchTerm, $options: "i" } },
+//         { "customerId.lastName": { $regex: searchTerm, $options: "i" } },
+//         { invoiceNumber: { $regex: searchTerm, $options: "i" } },
+//         { transactionStatus: { $regex: searchTerm, $options: "i" } },
+//         { "planId.planName": { $regex: searchTerm, $options: "i" } },
+//         {
+//           $and: [
+//             { serviceIds: { $exists: true, $not: { $size: 0 } } },
+//             {
+//               serviceIds: {
+//                 $elemMatch: {
+//                   serviceName: { $regex: searchTerm, $options: "i" },
+//                 },
+//               },
+//             },
+//           ],
+//         },
+//       ];
+//     }
+
+//     // Count the total number of transactions that match the query
+//     const totalCount = await Transaction.countDocuments(query);
+
+//     // Find transactions with pagination and populate related information
+//     const transactions = await Transaction.find(query)
+//       .skip(pageSize * (page - 1))
+//       .limit(pageSize)
+//       .populate("customerId", "firstName lastName email")
+//       .populate({
+//         path: "planId",
+//         select: "planName",
+//       })
+//       .populate({
+//         path: "user",
+//         select: "firstName lastName email profile",
+//         populate: {
+//           path: "partnerUser",
+//           model: "Partner",
+//           select: "partnerName email contact1 contact2 avatar status",
+//         },
+//       })
+//       .populate({
+//         path: "serviceIds",
+//         select: "serviceName",
+//       });
+
+//     // Return the paginated and searched transactions
+//     res.status(200).json({
+//       success: true,
+//       count: transactions.length,
+//       total: totalCount,
+//       pageSize,
+//       page,
+//       transactions,
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// });
+
 exports.getMyTransactions = asyncHandler(async (req, res, next) => {
   try {
     // Parse pagination parameters from the request query
@@ -922,6 +1060,10 @@ exports.getMyTransactions = asyncHandler(async (req, res, next) => {
 
     // Parse the search term from the request query
     const searchTerm = req.query.searchTerm;
+
+    // Parse the date range parameters from the request query
+    const startDate = req.query.startDate; // Format: YYYY-MM-DD
+    const endDate = req.query.endDate; // Format: YYYY-MM-DD
 
     // Create the query object
     const query = { user: req.user.id };
@@ -947,6 +1089,14 @@ exports.getMyTransactions = asyncHandler(async (req, res, next) => {
           ],
         },
       ];
+    }
+
+    // Add date range criteria if both startDate and endDate are provided
+    if (startDate && endDate) {
+      query.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
     }
 
     // Count the total number of transactions that match the query
@@ -988,6 +1138,7 @@ exports.getMyTransactions = asyncHandler(async (req, res, next) => {
     next(error);
   }
 });
+
 
 exports.getTransactionsByPartnerUser = async (req, res, next) => {
   try {
@@ -1302,6 +1453,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
       response = `END Error fetching transactions`;
     }
   } else if (text === "2") {
+    // else if (text.startsWith("2")) {
     try {
       const result = await User.findOne({ contact1: phoneNumber }).populate({
         path: "plan",
@@ -1314,38 +1466,31 @@ exports.ussd = asyncHandler(async (req, res, next) => {
       if (result && result.plan) {
         const plan = result.plan;
         const pageSize = 5;
-  
-        // Get the current page from sessionState
-        let currentPage = parseInt(sessionState.currentPage) || 1;
+        const startIndex = parseInt(text.split("*")[1]) || 0; // Extract start index from input text
   
         let response = `CON Your Plan Services:\n`;
-  
-        const startIndex = (currentPage - 1) * pageSize;
-        const endIndex = startIndex + pageSize;
   
         for (let planIndex = 0; planIndex < plan.length; planIndex++) {
           const planService = plan[planIndex].planService;
   
-          for (let serviceIndex = startIndex; serviceIndex < endIndex && serviceIndex < planService.length; serviceIndex++) {
+          for (let serviceIndex = startIndex; serviceIndex < planService.length; serviceIndex++) {
             const service = planService[serviceIndex];
             const serviceNumber = serviceIndex + 1;
   
             response += `${serviceNumber}. Benefit: ${service.serviceName}\n`;
             response += `   Balance: ${service.remainingBalance}\n\n`;
+  
+            if (serviceNumber - startIndex >= pageSize) {
+              // Limit reached, provide option to show more
+              response += `99. Show more\n`;
+              break;
+            }
           }
   
-          if (endIndex >= planService.length) {
+          if (startIndex + pageSize >= planService.length) {
             break;
           }
         }
-  
-        // Provide option to show more if there are more services
-        if (endIndex < plan[0].planService.length) {
-          response += `99. Show more\n`;
-        }
-  
-        // Increment the current page in sessionState
-        sessionState.currentPage = currentPage + 1;
   
         // Send the response back to API
         res.set("Content-type: text/plain");
@@ -1363,6 +1508,7 @@ exports.ussd = asyncHandler(async (req, res, next) => {
       res.send(response);
     }
   }
+  
   
    else if (text === "3") {
     // Terminal response

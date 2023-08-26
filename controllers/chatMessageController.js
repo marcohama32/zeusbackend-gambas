@@ -1,13 +1,11 @@
 const ChatMessage = require("../models/chatMessageModel");
 const asyncHandler = require("../middleware/asyncHandler");
+const userSocketMap = require("../utils/userSocketMap");
 
-// @desc    Save chat message
-// @route   POST /api/chat/message
 exports.saveChatMessage = asyncHandler(async (req, res) => {
-  const { text,senderAvatar,receiverAvatar,receiverName,receiverId } = req.body;
+  const { text, senderAvatar, receiverAvatar, receiverName, receiverId } = req.body;
 
   const senderId = req.user.id;
-  console.log("Name: ",text)
   const senderName = req.user.firstName;
 
   const newChatMessage = new ChatMessage({
@@ -22,6 +20,19 @@ exports.saveChatMessage = asyncHandler(async (req, res) => {
 
   try {
     const savedMessage = await newChatMessage.save();
+
+    const io = req.app.locals.io; // Get the Socket.IO instance
+    
+    // Emit the saved message to all connected clients using Socket.IO
+    const messageToEmit = JSON.stringify(savedMessage);
+    io.emit('chat message', messageToEmit); // Emit chat message to all clients
+    
+     // Emit the notification to the specific receiver's socket with the message text
+     const receiverSocket = userSocketMap.getUserSocket(receiverId);
+     if (receiverSocket) {
+       receiverSocket.emit('notification', `${text}`);
+     }
+    
     res.status(201).json(savedMessage);
   } catch (err) {
     console.error("Error saving chat message:", err);
@@ -41,8 +52,8 @@ exports.getChatMessages = asyncHandler(async (req, res) => {
         { senderId: receiverId, receiverId: senderId },
       ],
     }).populate({
-      path: 'senderId receiverId', // Populate both sender and receiver
-      select: 'firstName lastName email contact1 contact2 address', // Select the desired fields
+      path: 'senderId receiverId',
+      select: 'firstName lastName email contact1 contact2 address avatar',
     });
 
     // Send the messages as a response
@@ -52,7 +63,6 @@ exports.getChatMessages = asyncHandler(async (req, res) => {
     res.status(500).json({ error: "Error fetching chat messages" });
   }
 });
-
 
 exports.deleteChatMessage = asyncHandler(async (req, res) => {
   const messageId = req.params.id;
@@ -64,6 +74,10 @@ exports.deleteChatMessage = asyncHandler(async (req, res) => {
     if (!deletedMessage) {
       return res.status(404).json({ error: "Chat message not found" });
     }
+
+    // Emit an event indicating that the message was deleted
+    const io = req.app.locals.io; // Get the Socket.IO instance
+    io.emit('chat message deleted', messageId);
 
     res.status(200).json({ message: "Chat message deleted successfully" });
   } catch (err) {
@@ -81,12 +95,16 @@ exports.updateChatMessage = asyncHandler(async (req, res) => {
     const updatedMessage = await ChatMessage.findByIdAndUpdate(
       messageId,
       { text },
-      { new: true } // This option returns the updated document
+      { new: true }
     );
 
     if (!updatedMessage) {
       return res.status(404).json({ error: "Chat message not found" });
     }
+
+    // Emit an event indicating that the message was updated
+    const io = req.app.locals.io; // Get the Socket.IO instance
+    io.emit('chat message updated', updatedMessage);
 
     res.status(200).json(updatedMessage);
   } catch (err) {
@@ -94,3 +112,12 @@ exports.updateChatMessage = asyncHandler(async (req, res) => {
     res.status(500).json({ error: "Error updating chat message" });
   }
 });
+
+
+//  // Find the Socket associated with the receiver's user ID
+//  const receiverSocket = io.sockets.connected[receiverId];
+    
+//  if (receiverSocket) {
+//    // Emit the notification to the receiver's Socket
+//    receiverSocket.emit('notification', JSON.stringify(savedMessage));
+//  }
