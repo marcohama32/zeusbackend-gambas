@@ -14,7 +14,7 @@ const chatMessageSchema = new mongoose.Schema({
   },
   senderName: {
     type: String,
-    required: true,
+    required: false,
   },
   senderAvatar: {
     type: String,
@@ -27,7 +27,7 @@ const chatMessageSchema = new mongoose.Schema({
   },
   receiverName: {
     type: String,
-    required: true,
+    required: false,
   },
   receiverAvatar: {
     type: String,

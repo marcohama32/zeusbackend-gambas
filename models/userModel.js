@@ -90,12 +90,14 @@ const userSchema = new mongoose.Schema(
     },
     contact1: {
       type: String,
+      unique: true,
       required: function () {
         return this.isNew; // Make it required only when creating a new document
       },
     },
     contact2: {
       type: String,
+      unique: true,
       required: false,
     },
     profile: {
@@ -199,6 +201,12 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "Active",
     },
+    isOnline: {
+      type: String,
+      default: 0,
+    },
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
   },
   { timestamps: true }
 );

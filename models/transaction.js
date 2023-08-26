@@ -61,6 +61,7 @@ const transactionSchema = new mongoose.Schema(
       required: function () {
         return this.transactionStatus === "Revoked";
       },
+      required:false
     },
     invoiceNumber: {
       type: String,
@@ -74,10 +75,15 @@ const transactionSchema = new mongoose.Schema(
         return `${prefix}-${timestamp}-${randomDigits}`;
       },
     },
+    companyPartner:{
+      type: ObjectId,
+      ref: "Partner",
+      required: false
+    },
     user: {
       type: ObjectId,
       ref: "User",
-      required: false,
+      required: true,
     },
   },
     
