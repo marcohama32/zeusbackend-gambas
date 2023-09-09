@@ -6,7 +6,7 @@ const {
   findCustomerRequestById,
   getAllCustomerRequests,
   getCustomerRequestsByUser,
-  status,
+  UpdateStatus,
 } = require("../controllers/customerrequestController");
 const { isAuthenticated, isAdmin, isPartner } = require("../middleware/auth");
 
@@ -17,7 +17,7 @@ const upload = require("../middleware/upload");
 router.post(
   "/request/createnew",
   upload.single("files"),
-//   isAuthenticated,
+  isAuthenticated,
   createCustomerRequest
 );
 
@@ -33,11 +33,11 @@ router.get("/request/get/:id", isAuthenticated, findCustomerRequestById);
 router.get("/request/getall", isAuthenticated, getAllCustomerRequests);
 
 router.get(
-  "/request/get/logeduser",
+  "/request/get/logeduser/request",
   isAuthenticated,
   getCustomerRequestsByUser
 );
 
-router.put("/status/:id", isAuthenticated, status);
+router.put("/request/status/:id", isAuthenticated, UpdateStatus);
 
 module.exports = router;

@@ -12,7 +12,13 @@ const {
   uploadTransactionMultipleFiles,
   getAllTransactions,
   getTransactionsByPartnerUser,
+  getTransactionsHistory,
   getLogedCustomerTransactions,
+  createTransactionFarmacy,
+  createTransactionHospital,
+  getTransactionsFromCompany,
+  cancelTransaction,
+  generateInvoicePDF,
 } = require("../controllers/customertransactionController");
 const { isAuthenticated, isAdmin, isPartner } = require("../middleware/auth");
 const {
@@ -31,12 +37,35 @@ router.post(
   isPartner,
   createTransaction
 );
+// create farmacy transaction
+router.post(
+  "/farmacytrasaction/create",
+  upload.array("multipleFiles[]"),
+  isAuthenticated,
+  isPartner,
+  createTransactionFarmacy
+);
+// create hospital transaction
+router.post(
+  "/hospitaltrasaction/create",
+  upload.array("multipleFiles[]"),
+  isAuthenticated,
+  isPartner,
+  createTransactionHospital
+);
 router.put("/revoke/transaction/:transactionId", isAuthenticated, revokeTransaction);
+router.put("/cancel/transaction/:transactionId", isAuthenticated, cancelTransaction);
 router.put("/aprove/transaction/:transactionId", isAuthenticated, approveTransaction);
 router.get(
   "/ctransation/get/:customerId",
   isAuthenticated,
   getTransactionsByCustomerId
+);
+//get transaction from a company
+router.get(
+  "/companytransactions/get/:id",
+  isAuthenticated,
+  getTransactionsFromCompany
 );
 router.get(
   "/ctransation/getall",
@@ -49,7 +78,7 @@ router.get(
   isAuthenticated,
   getTransactionById
 );
-
+//All transactions from a especific user partner [loged partner]
 router.get("/get/mytransaction", isAuthenticated, getMyTransactions);
 
 router.delete("/transaction/file/delete", isAuthenticated, deleteFile);
@@ -66,17 +95,28 @@ router.put(
   isAuthenticated,
   editTransaction
 );
-
+//All transactions from a especific partner [loged partner] 
 router.get(
   `/allcompanytransactions`,
   isAuthenticated,
   getTransactionsByPartnerUser
 );
-
+router.get(
+  `/gettransactionshistory/:id`,
+  isAuthenticated,
+  getTransactionsHistory
+);
 router.get(
   "/get/logedusertransaction",
   isAuthenticated,
   getLogedCustomerTransactions
 );
+router.get(
+  "/get/customerinvoice/:transactionID",
+  isAuthenticated,
+  generateInvoicePDF
+);
+
+
 
 module.exports = router;

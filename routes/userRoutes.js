@@ -216,8 +216,15 @@ router.put(
 );
 
 ////////////////////////////////// create partner user ////////////////////////////////////
+// router.post(
+//   "/user/corporatedependent/create",
+//   upload.single("avatar"),
+//   isAuthenticated,
+//   isAdmin,
+//   createPartnerUser
+// );
 router.post(
-  "/user/corporatedependent/create",
+  "/user/partneruser/create",
   upload.single("avatar"),
   isAuthenticated,
   isAdmin,
