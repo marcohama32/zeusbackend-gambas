@@ -76,7 +76,6 @@ exports.uploadMultipleFiles = async (req, res, next) => {
   }
 };
 
-
 //create IndividualCustomer
 exports.createIndividualUser = asyncHandler(async (req, res, next) => {
   try {
@@ -139,7 +138,6 @@ exports.createIndividualUser = asyncHandler(async (req, res, next) => {
       });
     }
 
-
     const existingPlan = await Plan.findById(plan);
     if (!existingPlan) {
       return next(new ErrorResponse("Plan doesn't exist, please check", 400));
@@ -172,7 +170,7 @@ exports.createIndividualUser = asyncHandler(async (req, res, next) => {
       role: 5,
       avatar,
       userType: 5,
-      password:hashedPassword,
+      password: hashedPassword,
       user: req.user.id,
     });
 
@@ -208,7 +206,7 @@ exports.editIndividualUser = asyncHandler(async (req, res, next) => {
     plan,
     status,
     relation,
-    password
+    password,
   } = req.body;
 
   const requiredFields = [
@@ -228,7 +226,7 @@ exports.editIndividualUser = asyncHandler(async (req, res, next) => {
     monthlyFee,
     plan,
     status,
-    relation
+    relation,
   ];
 
   if (requiredFields.some((field) => !field)) {
@@ -364,8 +362,6 @@ exports.editIndividualUser = asyncHandler(async (req, res, next) => {
 //   }
 // };
 
-
-
 exports.getAllIndividualCustomer = async (req, res, next) => {
   let pageSize = Number(req.query.pageSize) || 10;
   let page = Number(req.query.pageNumber) || 1;
@@ -373,11 +369,17 @@ exports.getAllIndividualCustomer = async (req, res, next) => {
 
   // Validate pageSize and pageNumber
   if (pageSize <= 0) {
-    return res.status(400).json({ success: false, error: "Invalid pageSize. Must be greater than 0" });
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageSize. Must be greater than 0",
+    });
   }
 
   if (page <= 0) {
-    return res.status(400).json({ success: false, error: "Invalid pageNumber. Must be greater than 0" });
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageNumber. Must be greater than 0",
+    });
   }
 
   try {
@@ -386,7 +388,8 @@ exports.getAllIndividualCustomer = async (req, res, next) => {
     if (searchTerm) {
       query = {
         $and: [
-          { $or: [
+          {
+            $or: [
               { firstName: { $regex: searchTerm, $options: "i" } },
               { lastName: { $regex: searchTerm, $options: "i" } },
               { idNumber: { $regex: searchTerm, $options: "i" } },
@@ -415,7 +418,7 @@ exports.getAllIndividualCustomer = async (req, res, next) => {
         populate: {
           path: "manager",
           select: "firstName lastName email",
-        }
+        },
       })
       .populate({
         path: "plan",
@@ -452,11 +455,6 @@ exports.getAllIndividualCustomer = async (req, res, next) => {
     return next(error);
   }
 };
-
-
-
-
-
 
 const fs = require("fs");
 const path = require("path");
@@ -508,3 +506,5 @@ exports.deleteFile = async (req, res, next) => {
     return next(error);
   }
 };
+
+
