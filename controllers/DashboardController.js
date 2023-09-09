@@ -50,35 +50,40 @@ exports.dashboardData = asyncHandler(async (req, res, next) => {
       .limit(5);
 
     const AllTransactions = await Transaction.find({
-        transactionStatus: "Completed",
-      })
+      transactionStatus: "Completed",
+    });
 
-      const currentDate = new Date();
-      const currentMonth = currentDate.getMonth();
-      const currentYear = currentDate.getFullYear();
-      
-      // Calculate the last month and year
-      const lastMonth = (currentMonth === 0) ? 11 : currentMonth - 1;
-      const lastYear = (lastMonth === 11) ? currentYear - 1 : currentYear;
-      
-      // Calculate current month's revenue and last month's revenue
-      let currentMonthRevenue = 0;
-      let lastMonthRevenue = 0;
-      
-      AllTransactions.forEach((transaction) => {
-        const transactionDate = new Date(transaction.createdAt);
-        const transactionMonth = transactionDate.getMonth();
-        const transactionYear = transactionDate.getFullYear();
-      
-        if (transaction.transactionStatus === "Completed") {
-          if (transactionYear === currentYear && transactionMonth === currentMonth) {
-            currentMonthRevenue += transaction.amount;
-          } else if (transactionYear === lastYear && transactionMonth === lastMonth) {
-            lastMonthRevenue += transaction.amount;
-          }
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+
+    // Calculate the last month and year
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const lastYear = lastMonth === 11 ? currentYear - 1 : currentYear;
+
+    // Calculate current month's revenue and last month's revenue
+    let currentMonthRevenue = 0;
+    let lastMonthRevenue = 0;
+
+    AllTransactions.forEach((transaction) => {
+      const transactionDate = new Date(transaction.createdAt);
+      const transactionMonth = transactionDate.getMonth();
+      const transactionYear = transactionDate.getFullYear();
+
+      if (transaction.transactionStatus === "Completed") {
+        if (
+          transactionYear === currentYear &&
+          transactionMonth === currentMonth
+        ) {
+          currentMonthRevenue += transaction.amount;
+        } else if (
+          transactionYear === lastYear &&
+          transactionMonth === lastMonth
+        ) {
+          lastMonthRevenue += transaction.amount;
         }
-      });
-      
+      }
+    });
 
     // Calculate service popularity
     const servicePopularity = await calculateServicePopularity(
@@ -164,36 +169,132 @@ exports.dashboardData = asyncHandler(async (req, res, next) => {
 
 // Function to calculate service popularity
 async function calculateServicePopularity(transactions) {
-    const serviceUsage = {};
-    transactions.forEach((transaction) => {
-      transaction.serviceIds.forEach((serviceId) => {
-        if (serviceUsage[serviceId]) {
-          serviceUsage[serviceId]++;
-        } else {
-          serviceUsage[serviceId] = 1;
-        }
-      });
+  const serviceUsage = {};
+  transactions.forEach((transaction) => {
+    transaction.serviceIds.forEach((serviceId) => {
+      if (serviceUsage[serviceId]) {
+        serviceUsage[serviceId]++;
+      } else {
+        serviceUsage[serviceId] = 1;
+      }
     });
-  
-    const sortedServices = Object.keys(serviceUsage).sort(
-      (a, b) => serviceUsage[b] - serviceUsage[a]
-    );
-    const topServices = sortedServices.slice(0, 10);
-  
-    const servicePopularity = await PlanService.find({
-      _id: { $in: topServices },
-    })
-      .select("serviceName")
-      .lean(); // Convert Mongoose document to plain JavaScript object
-  
-    // Add the count to each service popularity entry
-    const servicePopularityWithCount = servicePopularity.map((service) => {
-      return {
-        ...service,
-        count: serviceUsage[service._id],
-      };
-    });
-  
-    return servicePopularityWithCount;
+  });
+
+  const sortedServices = Object.keys(serviceUsage).sort(
+    (a, b) => serviceUsage[b] - serviceUsage[a]
+  );
+  const topServices = sortedServices.slice(0, 10);
+
+  const servicePopularity = await PlanService.find({
+    _id: { $in: topServices },
+  })
+    .select("serviceName")
+    .lean(); // Convert Mongoose document to plain JavaScript object
+
+  // Add the count to each service popularity entry
+  const servicePopularityWithCount = servicePopularity.map((service) => {
+    return {
+      ...service,
+      count: serviceUsage[service._id],
+    };
+  });
+
+  return servicePopularityWithCount;
+}
+
+//admin total transactions, total by status
+exports.TransactionsTotals = asyncHandler(async (req, res, next) => {
+  try {
+    const transactionStatusCounts = await Transaction.aggregate([
+      {
+        $group: {
+          _id: "$transactionStatus",
+          count: { $sum: 1 },
+          totalAmount: { $sum: "$amount" }, // Calculate total amount for each status
+          responseTime: {
+            $avg: {
+              $cond: {
+                if: {
+                  $and: [
+                    { $eq: ["$transactionStatus", "Approved"] },
+                    { $eq: ["$transactionStatus", "Pending"] },
+                  ],
+                },
+                then: { $subtract: ["$updatedAt", "$createdAt"] },
+                else: null,
+              },
+            },
+          },
+        },
+      },
+    ]);
+
+    const dashboardTransaction = {
+      totalTransactions: transactionStatusCounts.reduce(
+        (total, statusCount) => total + statusCount.count,
+        0
+      ),
+      statusCounts: transactionStatusCounts.reduce(
+        (statusCounts, statusCount) => {
+          statusCounts[statusCount._id] = {
+            count: statusCount.count,
+            totalAmount: statusCount.totalAmount,
+            responseTime: statusCount.responseTime || 0, // Default to 0 if no response time calculated
+          };
+          return statusCounts;
+        },
+        {}
+      ),
+    };
+
+    res.json(dashboardTransaction);
+  } catch (error) {
+    console.error("Error fetching dashboard data:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while fetching dashboard data." });
   }
-  
+});
+
+
+// calculateAverageApprovalTime
+exports.calculateAverageApprovalTime = async (req, res) => {
+  try {
+    const transactions = await Transaction.find({
+      $or: [
+        { transactionStatus: "Approved" },
+        { transactionStatus: "Aproved" }, // Include variations here
+      ],
+    });
+
+    let totalApprovalTime = 0;
+    let count = 0;
+
+    transactions.forEach((transaction) => {
+      const approvedTimestamp = transaction.statusHistory.find(
+        (entry) => entry.status === "Approved" || entry.status === "Aproved"
+      );
+
+      const pendingTimestamp = transaction.statusHistory.find(
+        (entry) => entry.status === "Pending"
+      );
+
+      if (approvedTimestamp && pendingTimestamp) {
+        const approvalTime = approvedTimestamp.date - pendingTimestamp.date;
+        totalApprovalTime += approvalTime;
+        count++;
+      }
+    });
+
+    const averageApprovalTime =
+      count > 0 ? totalApprovalTime / count : 0;
+
+    res.status(200).json({
+      success: true,
+      averageApprovalTime: averageApprovalTime,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: "Something went wrong" });
+  }
+};

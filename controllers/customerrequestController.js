@@ -4,45 +4,46 @@ const ErrorResponse = require("../utils/errorResponse");
 
 // Create a customer request with status history and changedBy reference
 exports.createCustomerRequest = asyncHandler(async (req, res, next) => {
+  try {
+    // Extract data from the request body
+    const { title, comment } = req.body;
 
-  const files = req.file?.path;
-    console.log("Received form data:", req.body);
-    console.log("files :", files);
-//   try {
-//     const { title, comment } = req.body;
+    // Check if 'title' is provided
+    if (!title) {
+      return next(new ErrorResponse("Title field is required", 400));
+    }
 
-//     console.log("Hama: ", title)
-//     // Check if 'title' is provided
-//     if (!title) {
-//       return next(new ErrorResponse("Title field is required", 400));
-//     }
+    // Get the authenticated user's ID from the request
+    const createdBy = req.user.id;
 
-//     // Get the authenticated user's ID
-//     const createdBy = req.user.id;
+    // Check if a file was uploaded
+    const files = req.file?.path;
 
-//     const files = req.file?.path;
-//     // Create the customer request
-//     const customerRequest = await CustomerRequest.create({
-//       customer: createdBy, // Set the customer to the authenticated user
-//       title,
-//       files,
-//       comment,
+    // Create the customer request with status history
+    const customerRequest = await CustomerRequest.create({
+      customer: createdBy,
+      title,
+      files,
+      comment,
+      statusHistory: [
+        {
+          status: "Pending",
+          changedBy: createdBy,
+        },
+      ],
+    });
 
-//       statusHistory: [
-//         {
-//           changedBy: createdBy, // Set the changedBy to the authenticated user
-//         },
-//       ],
-//     });
-
-//     res.status(201).json({
-//       success: true,
-//       customerRequest,
-//     });
-//   } catch (error) {
-//     next(error);
-//   }
+    // Respond with a 201 Created status and the newly created customer request
+    res.status(201).json({
+      success: true,
+      customerRequest,
+    });
+  } catch (error) {
+    // Forward errors to the error-handling middleware
+    next(error);
+  }
 });
+
 
 
 // Update a customer request || customer only can change status to canceled
@@ -154,13 +155,21 @@ exports.getAllCustomerRequests = asyncHandler(async (req, res, next) => {
 
 //loged user requests
 exports.getCustomerRequestsByUser = asyncHandler(async (req, res, next) => {
+
   try {
-    const pageSize = Number(req.query.pageSize) || 10;
-    const page = Number(req.query.pageNumber) || 1;
+    // Parse and validate pageSize and page parameters
+    const pageSize = parseInt(req.query.pageSize) || 10;
+    const page = parseInt(req.query.pageNumber) || 1;
+
+    if (pageSize <= 0 || page <= 0) {
+      return next(new ErrorResponse("Invalid page or pageSize parameters", 400));
+    }
+
     const searchTerm = req.query.searchTerm;
 
     // Get the ID of the logged-in user
     const userId = req.user.id;
+    console.log("Logged-in User ID:", userId);
 
     // Create the query object
     const query = { customer: userId };
@@ -182,43 +191,71 @@ exports.getCustomerRequestsByUser = asyncHandler(async (req, res, next) => {
       .skip(pageSize * (page - 1))
       .limit(pageSize);
 
-    res.status(200).json({
+
+      console.log("MongoDB Query:", query);
+      console.log("Total Count:", totalCount);
+      console.log("Customer Requests:", customerRequests);
+  
+    // Create a structured response
+    const response = {
       success: true,
-      count: customerRequests.length,
-      total: totalCount,
-      pageSize,
-      page,
-      customerRequests,
-    });
+      data: {
+        count: customerRequests.length,
+        total: totalCount,
+        pageSize,
+        page,
+        customerRequests,
+      },
+    };
+
+    res.status(200).json(response);
   } catch (error) {
     next(error);
   }
 });
 
 // Update the status of a customer request
-exports.status = asyncHandler(async (req, res) => {
+exports.UpdateStatus = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const { status } = req.body;
+  console.log("Status: ", status)
 
   try {
-    const adminId = req.user.id; // Assuming you have an authenticated user
+    // Assuming you have an authenticated user
+    const adminId = req.user.id;
 
-    const request = await CustomerRequest.findByIdAndUpdate(
-      id,
+    // Update status and status history using a separate function
+    const updatedRequest = await updateRequestStatus(id, status, adminId);
+
+    if (!updatedRequest) {
+      // If the request is not found, return a 404 response
+      return next(new ErrorResponse("Customer request not found", 404));
+    }
+
+    // Respond with the updated request
+    res.json(updatedRequest);
+  } catch (error) {
+    // Pass the error to the error-handling middleware
+    next(error);
+  }
+});
+
+// Function to update request status and history
+const updateRequestStatus = async (requestId, newStatus, changedBy) => {
+  try {
+    const updatedRequest = await CustomerRequest.findByIdAndUpdate(
+      requestId,
       {
-        $set: { status: status },
-        $push: { statusHistory: { status: status, changedBy: adminId } },
+        $set: { status: newStatus },
+        $push: { statusHistory: { status: newStatus, changedBy } },
       },
       { new: true }
     );
 
-    if (!request) {
-      return res.status(404).json({ message: "Customer request not found" });
-    }
-
-    res.json(request);
+    return updatedRequest;
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error updating status" });
+    // Handle any database-related errors here or pass them to the caller
+    throw error;
   }
-});
+};
+

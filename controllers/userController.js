@@ -293,7 +293,7 @@ if(!validUser) {
 });
 
 //get user by memberShipID
-exports.UserByMembershipID = (async (req, res, next) => {
+exports.UserByMembershipID = async (req, res, next) => {
   try {
     const { memberShipID } = req.query;
 
@@ -302,11 +302,12 @@ exports.UserByMembershipID = (async (req, res, next) => {
       return res.status(400).json({ success: false, error: "Invalid input" });
     }
 
-    // Find the user by membership ID and select only the specified fields
-    const foundUser = await User.findOne(
-      { memberShipID },
-      "firstName lastName email gender dob relation idType idNumber address contact1 contact2 avatar memberShipID _id status"
-    );
+    // Find the user by membership ID and populate the 'myMembers.user' field
+    const foundUser = await User.findOne({ memberShipID })
+    .populate({
+      path: "myMembers",
+    });
+    // .select("firstName lastName email gender dob relation idType idNumber myMembers address contact1 contact2 avatar memberShipID _id status");
 
     // Check if the user exists
     if (!foundUser) {
@@ -321,46 +322,13 @@ exports.UserByMembershipID = (async (req, res, next) => {
       });
     }
 
-    // Return the selected fields of the user
-    const {
-      firstName,
-      lastName,
-      email,
-      gender,
-      dob,
-      relation,
-      idType,
-      idNumber,
-      address,
-      contact1,
-      contact2,
-      avatar,
-      _id
-      
-    } = foundUser;
-
     res.status(200).json({
       success: true,
-      thisuser: {
-        firstName,
-        lastName,
-        email,
-        gender,
-        dob,
-        relation,
-        idType,
-        idNumber,
-        address,
-        contact1,
-        contact2,
-        memberShipID,
-        avatar,
-        _id,
-      },
+      thisuser: foundUser,
     });
   } catch (error) {
     return next(error);
   }
-});
+};
 
 

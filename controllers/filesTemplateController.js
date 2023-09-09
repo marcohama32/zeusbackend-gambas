@@ -5,7 +5,7 @@ const asyncHandler = require("../middleware/asyncHandler");
 //create File Template
 exports.createFileTemplate = asyncHandler(async (req, res, next) => {
   try {
-    const { description } = req.body;
+    const { description, status } = req.body;
 
     // Check if 'description' is provided
     if (!description) {
@@ -17,6 +17,7 @@ exports.createFileTemplate = asyncHandler(async (req, res, next) => {
     const fileUpload = await FilesTemplate.create({
       description,
       fileTemplate,
+      status,
       user: req.user.id,
     });
 
@@ -31,9 +32,9 @@ exports.createFileTemplate = asyncHandler(async (req, res, next) => {
 
 exports.updateFileTemplate = asyncHandler(async (req, res, next) => {
   try {
-    const { description } = req.body;
-    const fileId = req.params.id; // Assuming you're passing the file ID as a URL parameter
-    console.log("Description: ", description);
+    const { description, status } = req.body;
+    const fileId = req.params.templateId; // Assuming you're passing the file ID as a URL parameter
+    console.log("Description: ", status);
 
     // Check if 'description' is provided
     if (!description) {
@@ -42,6 +43,7 @@ exports.updateFileTemplate = asyncHandler(async (req, res, next) => {
 
     const updatedFields = {
       description,
+      status
     };
 
     if (req.file) {
@@ -151,3 +153,77 @@ exports.getAllFileTemplates = asyncHandler(async (req, res, next) => {
     next(error);
   }
 });
+
+// get all active files
+exports.getAllActiveFileTemplates = asyncHandler(async (req, res, next) => {
+  try {
+    const pageSize = Number(req.query.pageSize) || 10;
+    const page = Number(req.query.pageNumber) || 1;
+    const searchTerm = req.query.searchTerm;
+
+    // Validate pageSize and pageNumber
+    if (pageSize <= 0 || page <= 0) {
+      return res.status(400).json({ success: false, error: "Invalid pageSize or pageNumber" });
+    }
+
+    const query = { status: 'Active' };
+
+    if (searchTerm) {
+      console.log("Search Term: ", searchTerm);
+      const escapedSearchTerm = escapeRegExp(searchTerm);
+      console.log("Escaped Search Term: ", escapedSearchTerm);
+      query.description = { $regex: escapedSearchTerm, $options: "i" };
+    }
+
+    const count = await FilesTemplate.countDocuments(query);
+
+    const fileTemplates = await FilesTemplate.find(query)
+      .skip(pageSize * (page - 1))
+      .limit(pageSize);
+
+    res.status(200).json({
+      success: true,
+      count,
+      page,
+      pages: Math.ceil(count / pageSize),
+      fileTemplates,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// get by id
+exports.singleTemplate = async (req, res, next) => {
+  try {
+    const templateId = req.params.templateId;
+    console.log(templateId)
+
+    const template = await FilesTemplate.findById(templateId)
+      .populate("user", "firstName lastName email")
+
+    // Check if the user exists
+    if (!template) {
+      return res.status(404).json({ success: false, error: "File not found" });
+    }
+
+    // Construct the full URL for the avatar image
+    if (template.fileTemplate) {
+      template.fileTemplate = `${template.fileTemplate}`; // Replace 'your-image-url' with the actual URL or path to your images
+    }
+
+    // Fetch and construct full URLs for the files
+    if (template.multipleFiles) {
+      const files = template.multipleFiles.split(",");
+      const fileURLs = files.map((file) => `${file}`);
+      template.multipleFiles = fileURLs;
+    }
+
+    res.status(200).json({
+      success: true,
+      template,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
