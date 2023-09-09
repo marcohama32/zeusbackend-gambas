@@ -29,13 +29,14 @@ module.exports = (io) => {
       // Broadcast the message to all connected clients
       io.emit("chat message", message);
 
+
      // Emit notification event to the specific receiver's socket
      const receiverId = message.receiverId;
      setTimeout(() => {
        const receiverSocket = userSocketMap.getUserSocket(receiverId);
     //   console.log("receiverSocket: ",receiverSocket)
        if (receiverSocket) {
-        //  receiverSocket.emit("notification", "You have a new message!");
+         receiverSocket.emit("notification", "You have a new message!");
         //  console.log(`Notification sent to user ${receiverId}`);
        } else {
         //  console.log("Receiver socket not found for user ID:", receiverId);
