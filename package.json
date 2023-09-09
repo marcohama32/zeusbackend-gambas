@@ -21,11 +21,15 @@
     "express-validator": "^7.0.1",
     "http": "^0.0.1-security",
     "jsonwebtoken": "^9.0.0",
+    "moment": "^2.29.4",
     "mongoose": "^6.10.1",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.4",
     "nodemon": "^2.0.22",
+    "pdf-lib": "^1.17.1",
+    "pdfkit": "^0.13.0",
+    "pdfmake": "^0.2.7",
     "socket.io": "^4.7.1",
     "ws": "^8.13.0"
   }
