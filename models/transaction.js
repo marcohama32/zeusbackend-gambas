@@ -4,18 +4,27 @@ const { ObjectId } = mongoose.Schema;
 const transactionSchema = new mongoose.Schema(
   {
     customerId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type:ObjectId,
       ref: "User",
       required: true,
     },
+    customerName: {
+      type: String,
+      required: false,
+    },
+    customerCompany: {
+      type: ObjectId,
+      ref: "Company",
+      required: false,
+    },
     planId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: ObjectId,
       ref: "Plan",
       required: true,
     },
     serviceIds: [
       {
-        type: mongoose.Schema.Types.ObjectId,
+        type: ObjectId,
         ref: "PlanServices",
         required: true,
       },
@@ -25,9 +34,13 @@ const transactionSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      required: true,
+      required: false,
     },
     amount: {
+      type: Number,
+      required: true,
+    },
+    revokedAmount: {
       type: Number,
       required: true,
     },
@@ -43,9 +56,17 @@ const transactionSchema = new mongoose.Schema(
     // Add any other fields related to the transaction here
     transactionStatus: {
       type: String,
-      enum: ["Pending", "Completed", "Revoked"],
-      default: "Pending",
+      enum: ["Pending", "Completed", "Revoked","Aproved","In progress","Canceled"],
+      default: "In progress",
     },
+    // Status change history
+    statusHistory: [
+      {
+        status: { type: String },
+        changedBy: { type: ObjectId, ref: "User" }, // Reference to the admin/user who changed the status
+        date: { type: Date, default: Date.now },
+      },
+    ],
     preAuthorization: {
       type: String,
       enum: ["yes", "no"], // Accepts "yes" or "no" as string values
@@ -60,6 +81,13 @@ const transactionSchema = new mongoose.Schema(
       type: String, // New field for commenting the reason for revoking the transaction by the admin
       required: function () {
         return this.transactionStatus === "Revoked";
+      },
+      required:false
+    },
+    cancelReason: {
+      type: String, // New field for commenting the reason for canceled the transaction by the admin
+      required: function () {
+        return this.transactionStatus === "Canceled";
       },
       required:false
     },

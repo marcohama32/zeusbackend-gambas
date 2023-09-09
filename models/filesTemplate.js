@@ -12,6 +12,10 @@ const FilesTemplateSchema = new mongoose.Schema(
       trim: true,
       required: [true, "Description is required"],
     },
+    status :{
+      type: String,
+      default: "Active"
+    },
     user: {
       type: ObjectId,
       ref: "User",
