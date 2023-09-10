@@ -16,10 +16,18 @@ const upload = require("../middleware/upload");
 // api/route
 router.post(
   "/request/createnew",
-  upload.single("files"),
+  upload.array("files[]"),
   isAuthenticated,
   createCustomerRequest
 );
+
+// router.post(
+//   "/hospitaltrasaction/create",
+//   upload.array("multipleFiles[]"),
+//   isAuthenticated,
+//   isPartner,
+//   createTransactionHospital
+// );
 
 router.put(
   "/request/update/:id",
