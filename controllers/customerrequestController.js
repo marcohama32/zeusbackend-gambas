@@ -17,7 +17,20 @@ exports.createCustomerRequest = asyncHandler(async (req, res, next) => {
     const createdBy = req.user.id;
 
     // Check if a file was uploaded
-    const files = req.file?.path;
+    // const files = req.file?.path;
+
+
+    const newFiles = req.files.map((file) => file.path.replace(/\\/g, "/"));
+
+    let files = ""; // Set default value as empty string if multipleFiles is undefined or null
+
+    if (files) {
+      files += ",";
+    }
+
+    files += newFiles.join(",");
+
+
 
     // Create the customer request with status history
     const customerRequest = await CustomerRequest.create({
