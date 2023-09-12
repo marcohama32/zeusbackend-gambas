@@ -314,9 +314,13 @@ exports.userProfile = async (req, res, next) => {
         path: "accountOwner",
         populate: {
           path: "manager",
-          select: "firstName lastName email",
+          select: "firstName lastName email _id",
+          populate: {
+            path: "lineManager",
+            select: "firstName lastName email _id", // You can select the fields you need
+          }
         }
-      }).populate("manager")
+      })      
       .populate({
         path: "user",
         select: "firstName lastName email",

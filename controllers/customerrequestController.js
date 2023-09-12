@@ -19,7 +19,6 @@ exports.createCustomerRequest = asyncHandler(async (req, res, next) => {
     // Check if a file was uploaded
     // const files = req.file?.path;
 
-
     const newFiles = req.files.map((file) => file.path.replace(/\\/g, "/"));
 
     let files = ""; // Set default value as empty string if multipleFiles is undefined or null
@@ -29,8 +28,6 @@ exports.createCustomerRequest = asyncHandler(async (req, res, next) => {
     }
 
     files += newFiles.join(",");
-
-
 
     // Create the customer request with status history
     const customerRequest = await CustomerRequest.create({
@@ -56,8 +53,6 @@ exports.createCustomerRequest = asyncHandler(async (req, res, next) => {
     next(error);
   }
 });
-
-
 
 // Update a customer request || customer only can change status to canceled
 exports.updateCustomerRequest = asyncHandler(async (req, res, next) => {
@@ -111,7 +106,10 @@ exports.findCustomerRequestById = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
 
     // Find the customer request by ID
-    const customerRequest = await CustomerRequest.findById(id);
+    const customerRequest = await CustomerRequest.findById(id).populate({
+      path: "statusHistory.changedBy",
+      select: "firstName lastName email avatar",
+    })
 
     if (!customerRequest) {
       return res.status(404).json({ message: "Customer request not found" });
@@ -168,14 +166,15 @@ exports.getAllCustomerRequests = asyncHandler(async (req, res, next) => {
 
 //loged user requests
 exports.getCustomerRequestsByUser = asyncHandler(async (req, res, next) => {
-
   try {
     // Parse and validate pageSize and page parameters
     const pageSize = parseInt(req.query.pageSize) || 10;
     const page = parseInt(req.query.pageNumber) || 1;
 
     if (pageSize <= 0 || page <= 0) {
-      return next(new ErrorResponse("Invalid page or pageSize parameters", 400));
+      return next(
+        new ErrorResponse("Invalid page or pageSize parameters", 400)
+      );
     }
 
     const searchTerm = req.query.searchTerm;
@@ -204,21 +203,18 @@ exports.getCustomerRequestsByUser = asyncHandler(async (req, res, next) => {
       .skip(pageSize * (page - 1))
       .limit(pageSize);
 
+    // console.log("MongoDB Query:", query);
+    // console.log("Total Count:", totalCount);
+    // console.log("Customer Requests:", customerRequests);
 
-      console.log("MongoDB Query:", query);
-      console.log("Total Count:", totalCount);
-      console.log("Customer Requests:", customerRequests);
-  
     // Create a structured response
     const response = {
       success: true,
-      data: {
-        count: customerRequests.length,
-        total: totalCount,
-        pageSize,
-        page,
-        customerRequests,
-      },
+      count: customerRequests.length,
+      total: totalCount,
+      pageSize,
+      page,
+      customerRequests,
     };
 
     res.status(200).json(response);
@@ -231,7 +227,7 @@ exports.getCustomerRequestsByUser = asyncHandler(async (req, res, next) => {
 exports.UpdateStatus = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const { status } = req.body;
-  console.log("Status: ", status)
+  // console.log("Status: ", status)
 
   try {
     // Assuming you have an authenticated user
@@ -271,4 +267,3 @@ const updateRequestStatus = async (requestId, newStatus, changedBy) => {
     throw error;
   }
 };
-
