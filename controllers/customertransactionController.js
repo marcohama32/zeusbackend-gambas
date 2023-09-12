@@ -2093,7 +2093,7 @@ exports.getTransactionsFromCompany = asyncHandler(async (req, res, next) => {
 
 
 
-exports.generateInvoicePDF = asyncHandler(async (req, res, next) => {
+exports.generateInvoicePDF1 = asyncHandler(async (req, res, next) => {
   try {
     const transactionID = req.params.transactionID;
 
@@ -2378,6 +2378,279 @@ exports.generateInvoicePDF = asyncHandler(async (req, res, next) => {
     next(error);
   }
 });
+
+exports.generateInvoicePDF = asyncHandler(async (req, res, next) => {
+  try {
+    const transactionID = req.params.transactionID;
+
+    const transaction = await Transaction.findById(transactionID)
+      .populate("customerId")
+      .populate({
+        path: "user",
+        select: "firstName lastName email profile",
+        populate: {
+          path: "partnerUser",
+          model: "Partner",
+          select: "partnerName email contact1 contact2 avatar status",
+        },
+      })
+      .populate(
+        "serviceIds",
+        "serviceName serviceDescription serviceAreaOfCover"
+      );
+
+    if (!transaction) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Transaction not found" });
+    }
+
+    const formattedAmount = transaction.amount.toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD", // Change the currency code as needed
+      minimumFractionDigits: 2, // Adjust to control the number of decimal places
+    });
+
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([600, 600]);
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=invoice_${transaction._id}.pdf`
+    );
+    res.setHeader("Content-type", "application/pdf");
+
+    const text = "Payment to:";
+    const text2 = "Amount:";
+    const textSize = 11;
+    const fontColor = rgb(0, 0, 0);
+    const mainFontColor = rgb(241 / 255, 95 / 255, 30 / 255);
+
+    const logoImageBytes = fs.readFileSync("controllers/logo.png");
+    const logoImage = await pdfDoc.embedPng(logoImageBytes);
+
+    const { width, height } = page.getSize();
+
+    page.drawText("Invoice", {
+      x: 50,
+      y: height - 80,
+      size: 16,
+      color: mainFontColor,
+      font: await pdfDoc.embedFont("Helvetica-Bold"),
+      align: "center",
+    });
+
+    page.drawText(`Receipt: ${transaction.invoiceNumber}`, {
+      x: 50,
+      y: height - 100,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(`${transaction.updatedAt.toLocaleDateString()}`, {
+      x: 50,
+      y: height - 120,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText("Client Details:", {
+      x: 50,
+      y: height - 160,
+      size: 11,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica-Bold"),
+    });
+
+    page.drawText(`${transaction.customerName}`, {
+      x: 50,
+      y: height - 180,
+      size: 13,
+      color: mainFontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(`${transaction.customerId.email}`, {
+      x: 50,
+      y: height - 200,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(`${transaction.customerId.address}`, {
+      x: 50,
+      y: height - 220,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(
+      `${transaction.customerId.contact1} , ${transaction.customerId.contact2}`,
+      {
+        x: 50,
+        y: height - 240,
+        size: 10,
+        color: fontColor,
+        font: await pdfDoc.embedFont("Helvetica"),
+      }
+    );
+
+    page.drawText(text, {
+      x: width - 80,
+      y: height - 160,
+      size: textSize,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica-Bold"),
+    });
+
+    page.drawText(`${transaction.user.partnerUser.partnerName}`, {
+      x: width - 80,
+      y: height - 180,
+      size: 13,
+      color: mainFontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(`${transaction.user.partnerUser.email}`, {
+      x: width - 80,
+      y: height - 200,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(
+      `${transaction.user.partnerUser.contact1} , ${transaction.user.partnerUser.contact2}`,
+      {
+        x: width - 80,
+        y: height - 220,
+        size: 10,
+        color: fontColor,
+        font: await pdfDoc.embedFont("Helvetica"),
+      }
+    );
+
+    page.drawText("Service:", {
+      x: 50,
+      y: height - 300,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawLine({
+      start: { x: 50, y: height - 305 },
+      end: { x: 50 + 500, y: height - 305 },
+      thickness: 1,
+      color: fontColor,
+    });
+
+    page.drawText(`${transaction.serviceIds[0].serviceName}`, {
+      x: 50,
+      y: height - 320,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(`${transaction.serviceIds[0].serviceDescription}`, {
+      x: 50,
+      y: height - 340,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(`${transaction.serviceIds[0].serviceAreaOfCover}`, {
+      x: 50,
+      y: height - 360,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+    page.drawLine({
+      start: { x: 50, y: height - 370 },
+      end: { x: 50 + 500, y: height - 370 },
+      thickness: 1,
+      color: fontColor,
+    });
+
+    page.drawText("Processed by:", {
+      x: 50,
+      y: height - 410,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(
+      `${transaction.user.firstName} ${transaction.user.lastName}`,
+      {
+        x: 50,
+        y: height - 430,
+        size: 13,
+        color: mainFontColor,
+        font: await pdfDoc.embedFont("Helvetica"),
+      }
+    );
+    page.drawText(
+      `${transaction.user.partnerUser.contact1} , ${transaction.user.partnerUser.contact2}`,
+      {
+        x: 50,
+        y: height - 450,
+        size: 11,
+        color: fontColor,
+        font: await pdfDoc.embedFont("Helvetica"),
+      }
+    );
+
+    page.drawText(text2, {
+      x: width - 80,
+      y: height - 410,
+      size: 11,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(formattedAmount, {
+      x: width - 80,
+      y: height - 430,
+      size: 10,
+      color: mainFontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText("Taxes included", {
+      x: width - 80,
+      y: height - 450,
+      size: 11,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    const pdfBytes = await pdfDoc.save();
+
+    const pdfStream = new stream.PassThrough();
+    pdfStream.end(pdfBytes);
+
+    pdfStream.on('data', (chunk) => {
+      res.write(chunk);
+    });
+
+    pdfStream.on('end', () => {
+      res.end();
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+
+
 
 exports.ussd = asyncHandler(async (req, res, next) => {
   const phoneNumber1 = "";
