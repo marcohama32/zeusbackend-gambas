@@ -11,6 +11,7 @@ const fs = require("fs");
 const pdfMake = require("pdfmake/build/pdfmake");
 const vfsFonts = require("pdfmake/build/vfs_fonts");
 const path = require("path");
+const stream = require('stream');
 
 exports.createTransaction1 = async (req, res) => {
   try {
