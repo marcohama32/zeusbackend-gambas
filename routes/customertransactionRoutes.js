@@ -113,7 +113,7 @@ router.get(
 );
 router.get(
   "/get/customerinvoice/:transactionID",
-  // isAuthenticated,
+  isAuthenticated,
   generateInvoicePDF
 );
 
