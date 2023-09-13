@@ -11,7 +11,7 @@ const fs = require("fs");
 const pdfMake = require("pdfmake/build/pdfmake");
 const vfsFonts = require("pdfmake/build/vfs_fonts");
 const path = require("path");
-const stream = require('stream');
+const stream = require("stream");
 
 exports.createTransaction1 = async (req, res) => {
   try {
@@ -2092,8 +2092,6 @@ exports.getTransactionsFromCompany = asyncHandler(async (req, res, next) => {
   }
 });
 
-
-
 exports.generateInvoicePDF1 = asyncHandler(async (req, res, next) => {
   try {
     const transactionID = req.params.transactionID;
@@ -2161,8 +2159,6 @@ exports.generateInvoicePDF1 = asyncHandler(async (req, res, next) => {
     //   width: 50, // Width of the logo image
     //   height: 50, // Height of the logo image
     // });
-
-    
 
     // Continue adding other content as before
     page.drawText("Invoice", {
@@ -2236,7 +2232,7 @@ exports.generateInvoicePDF1 = asyncHandler(async (req, res, next) => {
 
     // Payment to
     page.drawText(text, {
-      x: width - textWidth - 50, // Align to the right by subtracting the text width from the page width
+      x: width - textWidth - 20, // Align to the right by subtracting the text width from the page width
       y: height - 160,
       size: textSize,
       color: fontColor,
@@ -2244,7 +2240,7 @@ exports.generateInvoicePDF1 = asyncHandler(async (req, res, next) => {
     });
 
     page.drawText(`${transaction.user.partnerUser.partnerName}`, {
-      x: width - textWidth - 50,
+      x: width - textWidth - 20,
       y: height - 180,
       size: 13,
       color: mainFontColor,
@@ -2252,7 +2248,7 @@ exports.generateInvoicePDF1 = asyncHandler(async (req, res, next) => {
     });
 
     page.drawText(`${transaction.user.partnerUser.email}`, {
-      x: width - textWidth - 50,
+      x: width - textWidth - 20,
       y: height - 200,
       size: 10,
       color: fontColor,
@@ -2262,7 +2258,7 @@ exports.generateInvoicePDF1 = asyncHandler(async (req, res, next) => {
     page.drawText(
       `${transaction.user.partnerUser.contact1} , ${transaction.user.partnerUser.contact2}`,
       {
-        x: width - textWidth - 50,
+        x: width - textWidth - 20,
         y: height - 220,
         size: 10,
         color: fontColor,
@@ -2427,6 +2423,9 @@ exports.generateInvoicePDF = asyncHandler(async (req, res, next) => {
     const fontColor = rgb(0, 0, 0);
     const mainFontColor = rgb(241 / 255, 95 / 255, 30 / 255);
 
+    // Calculate the width based on font size and text length
+    const textWidth = textSize * text.length;
+
     const logoImageBytes = fs.readFileSync("controllers/logo.png");
     const logoImage = await pdfDoc.embedPng(logoImageBytes);
 
@@ -2501,7 +2500,7 @@ exports.generateInvoicePDF = asyncHandler(async (req, res, next) => {
     );
 
     page.drawText(text, {
-      x: width - 80,
+      x: width - textWidth - 50,
       y: height - 160,
       size: textSize,
       color: fontColor,
@@ -2509,7 +2508,7 @@ exports.generateInvoicePDF = asyncHandler(async (req, res, next) => {
     });
 
     page.drawText(`${transaction.user.partnerUser.partnerName}`, {
-      x: width - 80,
+      x: width - textWidth - 50,
       y: height - 180,
       size: 13,
       color: mainFontColor,
@@ -2517,7 +2516,7 @@ exports.generateInvoicePDF = asyncHandler(async (req, res, next) => {
     });
 
     page.drawText(`${transaction.user.partnerUser.email}`, {
-      x: width - 80,
+      x: width - textWidth - 50,
       y: height - 200,
       size: 10,
       color: fontColor,
@@ -2527,7 +2526,7 @@ exports.generateInvoicePDF = asyncHandler(async (req, res, next) => {
     page.drawText(
       `${transaction.user.partnerUser.contact1} , ${transaction.user.partnerUser.contact2}`,
       {
-        x: width - 80,
+        x: width - textWidth - 50,
         y: height - 220,
         size: 10,
         color: fontColor,
@@ -2610,7 +2609,7 @@ exports.generateInvoicePDF = asyncHandler(async (req, res, next) => {
     );
 
     page.drawText(text2, {
-      x: width - 80,
+      x: width - textWidth - 50,
       y: height - 410,
       size: 11,
       color: fontColor,
@@ -2618,7 +2617,7 @@ exports.generateInvoicePDF = asyncHandler(async (req, res, next) => {
     });
 
     page.drawText(formattedAmount, {
-      x: width - 80,
+      x: width - textWidth - 50,
       y: height - 430,
       size: 10,
       color: mainFontColor,
@@ -2626,7 +2625,7 @@ exports.generateInvoicePDF = asyncHandler(async (req, res, next) => {
     });
 
     page.drawText("Taxes included", {
-      x: width - 80,
+      x: width- textWidth - 50,
       y: height - 450,
       size: 11,
       color: fontColor,
@@ -2638,20 +2637,17 @@ exports.generateInvoicePDF = asyncHandler(async (req, res, next) => {
     const pdfStream = new stream.PassThrough();
     pdfStream.end(pdfBytes);
 
-    pdfStream.on('data', (chunk) => {
+    pdfStream.on("data", (chunk) => {
       res.write(chunk);
     });
 
-    pdfStream.on('end', () => {
+    pdfStream.on("end", () => {
       res.end();
     });
   } catch (error) {
     next(error);
   }
 });
-
-
-
 
 exports.ussd = asyncHandler(async (req, res, next) => {
   const phoneNumber1 = "";
