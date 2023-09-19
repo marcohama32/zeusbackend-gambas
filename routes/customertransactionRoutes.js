@@ -19,6 +19,13 @@ const {
   getTransactionsFromCompany,
   cancelTransaction,
   generateInvoicePDF,
+  generateMobileInvoicePDF,
+  getAllTransactionsInProgress,
+  getAllTransactionsPending,
+  getAllTransactionsAproved,
+  getAllTransactionsCompleted,
+  getAllTransactionsCanceled,
+  getAllTransactionsRevoked,
 } = require("../controllers/customertransactionController");
 const { isAuthenticated, isAdmin, isPartner } = require("../middleware/auth");
 const {
@@ -73,6 +80,62 @@ router.get(
   isAdmin,
   getAllTransactions
 );
+
+
+/////////////////// transactions status 
+// in progress
+router.get(
+  "/ctransation/get/transaction/inprogress",
+  isAuthenticated,
+  isAdmin,
+  getAllTransactionsInProgress
+);
+// pending 
+router.get(
+  "/ctransation/get/transaction/pending",
+  isAuthenticated,
+  isAdmin,
+  getAllTransactionsPending
+)
+
+// Aproved 
+router.get(
+  "/ctransation/get/transaction/aproved",
+  isAuthenticated,
+  isAdmin,
+  getAllTransactionsAproved
+)
+
+// completed 
+router.get(
+  "/ctransation/get/transaction/completed",
+  isAuthenticated,
+  isAdmin,
+  getAllTransactionsCompleted
+)
+
+// canceled 
+router.get(
+  "/ctransation/get/transaction/canceled",
+  isAuthenticated,
+  isAdmin,
+  getAllTransactionsCanceled
+)
+
+// Revoked 
+router.get(
+  "/ctransation/get/transaction/revoked",
+  isAuthenticated,
+  isAdmin,
+  getAllTransactionsRevoked
+)
+
+
+
+
+
+
+// ------------------------
 router.get(
   "/ctransation/get/transaction/:id",
   isAuthenticated,
@@ -116,7 +179,9 @@ router.get(
   isAuthenticated,
   generateInvoicePDF
 );
-
-
+router.get(
+  "/get/mobilecustomerinvoice/:transactionID",
+  generateMobileInvoicePDF
+);
 
 module.exports = router;
