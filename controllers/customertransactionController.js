@@ -531,8 +531,8 @@ exports.getAllTransactions = asyncHandler(async (req, res, next) => {
     const searchTerm = req.query.searchTerm;
 
     // Parse the date range parameters from the request query
-    const startDate = req.query.startDate; // Format: YYYY-MM-DD
-    const endDate = req.query.endDate; // Format: YYYY-MM-DD
+    const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+    const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
 
     // Create the query object
     const query = {};
@@ -560,13 +560,19 @@ exports.getAllTransactions = asyncHandler(async (req, res, next) => {
       ];
     }
 
-    // Add date range criteria if both startDate and endDate are provided
-    if (startDate && endDate) {
+   // Add date range criteria if both startDate and endDate are provided
+   if (startDateParam && endDateParam) {
+    const startDate = new Date(startDateParam);
+    const endDate = new Date(endDateParam);
+
+    if (!isNaN(startDate) && !isNaN(endDate)) {
+      // Only add date range criteria if startDate and endDate are valid dates
       query.createdAt = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate + "T23:59:59.999Z"), // Consider the end of the provided endDate
+        $gte: startDate,
+        $lte: endDate,
       };
     }
+  }
 
     // Calculate the total count of transactions matching the query
     const totalCount = await Transaction.countDocuments(query);
@@ -610,6 +616,564 @@ exports.getAllTransactions = asyncHandler(async (req, res, next) => {
   }
 });
 
+// get all transactions inprogress status
+exports.getAllTransactionsInProgress = asyncHandler(async (req, res, next) => {
+  try {
+    const pageSize = Number(req.query.pageSize) || 10;
+    const page = Number(req.query.pageNumber) || 1;
+    const searchTerm = req.query.searchTerm;
+
+    // Parse the date range parameters from the request query
+    const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+    const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
+
+    // Create the query object
+    const query = {transactionStatus: "In progress"};
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      query.$or = [
+        { customerName: { $regex: searchTerm, $options: "i" } },
+        { "customerId.lastName": { $regex: searchTerm, $options: "i" } },
+        { invoiceNumber: { $regex: searchTerm, $options: "i" } },
+        { transactionStatus: { $regex: searchTerm, $options: "i" } },
+        { "planId.planName": { $regex: searchTerm, $options: "i" } },
+        {
+          $and: [
+            { serviceIds: { $exists: true, $not: { $size: 0 } } },
+            {
+              serviceIds: {
+                $elemMatch: {
+                  serviceName: { $regex: searchTerm, $options: "i" },
+                },
+              },
+            },
+          ],
+        },
+      ];
+    }
+
+   // Add date range criteria if both startDate and endDate are provided
+   if (startDateParam && endDateParam) {
+    const startDate = new Date(startDateParam);
+    const endDate = new Date(endDateParam);
+
+    if (!isNaN(startDate) && !isNaN(endDate)) {
+      // Only add date range criteria if startDate and endDate are valid dates
+      query.createdAt = {
+        $gte: startDate,
+        $lte: endDate,
+      };
+    }
+  }
+
+    // Calculate the total count of transactions matching the query
+    const totalCount = await Transaction.countDocuments(query);
+
+    // Find transactions with pagination and populate user, plan, and service information
+    const transactions = await Transaction.find(query)
+      .sort({ updatedAt: -1 }) // Sort by createdAt in descending order
+      .skip(pageSize * (page - 1))
+      .limit(pageSize)
+      .populate({
+        path: "user",
+        select: "firstName lastName email profile",
+        populate: {
+          path: "partnerUser",
+          model: "Partner",
+          select: "partnerName email contact1 contact2 avatar status",
+        },
+      })
+      .populate("customerId", "firstName lastName email") // Populate user information
+      .populate({
+        path: "planId",
+        select: "planName", // Select the fields you want to include from the plan document
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+          select: "serviceName servicePrice", // Select the fields you want to include from the planService document
+        },
+      })
+      .populate("serviceIds", "serviceName servicePrice"); // Populate service information
+
+    res.status(200).json({
+      success: true,
+      count: transactions.length,
+      total: totalCount,
+      pageSize,
+      page,
+      transactions,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// get all transactions in Pending status
+exports.getAllTransactionsPending = asyncHandler(async (req, res, next) => {
+  try {
+    const pageSize = Number(req.query.pageSize) || 10;
+    const page = Number(req.query.pageNumber) || 1;
+    const searchTerm = req.query.searchTerm;
+
+    // Parse the date range parameters from the request query
+    const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+    const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
+
+    // Create the query object
+    const query = {transactionStatus: "Pending"};
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      query.$or = [
+        { customerName: { $regex: searchTerm, $options: "i" } },
+        { "customerId.lastName": { $regex: searchTerm, $options: "i" } },
+        { invoiceNumber: { $regex: searchTerm, $options: "i" } },
+        { transactionStatus: { $regex: searchTerm, $options: "i" } },
+        { "planId.planName": { $regex: searchTerm, $options: "i" } },
+        {
+          $and: [
+            { serviceIds: { $exists: true, $not: { $size: 0 } } },
+            {
+              serviceIds: {
+                $elemMatch: {
+                  serviceName: { $regex: searchTerm, $options: "i" },
+                },
+              },
+            },
+          ],
+        },
+      ];
+    }
+
+   // Add date range criteria if both startDate and endDate are provided
+   if (startDateParam && endDateParam) {
+    const startDate = new Date(startDateParam);
+    const endDate = new Date(endDateParam);
+
+    if (!isNaN(startDate) && !isNaN(endDate)) {
+      // Only add date range criteria if startDate and endDate are valid dates
+      query.createdAt = {
+        $gte: startDate,
+        $lte: endDate,
+      };
+    }
+  }
+
+    // Calculate the total count of transactions matching the query
+    const totalCount = await Transaction.countDocuments(query);
+
+    // Find transactions with pagination and populate user, plan, and service information
+    const transactions = await Transaction.find(query)
+      .sort({ updatedAt: -1 }) // Sort by createdAt in descending order
+      .skip(pageSize * (page - 1))
+      .limit(pageSize)
+      .populate({
+        path: "user",
+        select: "firstName lastName email profile",
+        populate: {
+          path: "partnerUser",
+          model: "Partner",
+          select: "partnerName email contact1 contact2 avatar status",
+        },
+      })
+      .populate("customerId", "firstName lastName email") // Populate user information
+      .populate({
+        path: "planId",
+        select: "planName", // Select the fields you want to include from the plan document
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+          select: "serviceName servicePrice", // Select the fields you want to include from the planService document
+        },
+      })
+      .populate("serviceIds", "serviceName servicePrice"); // Populate service information
+
+    res.status(200).json({
+      success: true,
+      count: transactions.length,
+      total: totalCount,
+      pageSize,
+      page,
+      transactions,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// get all transactions in Aproved status
+exports.getAllTransactionsAproved = asyncHandler(async (req, res, next) => {
+  try {
+    const pageSize = Number(req.query.pageSize) || 10;
+    const page = Number(req.query.pageNumber) || 1;
+    const searchTerm = req.query.searchTerm;
+
+    // Parse the date range parameters from the request query
+    const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+    const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
+
+    // Create the query object
+    const query = {transactionStatus: "Aproved"};
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      query.$or = [
+        { customerName: { $regex: searchTerm, $options: "i" } },
+        { "customerId.lastName": { $regex: searchTerm, $options: "i" } },
+        { invoiceNumber: { $regex: searchTerm, $options: "i" } },
+        { transactionStatus: { $regex: searchTerm, $options: "i" } },
+        { "planId.planName": { $regex: searchTerm, $options: "i" } },
+        {
+          $and: [
+            { serviceIds: { $exists: true, $not: { $size: 0 } } },
+            {
+              serviceIds: {
+                $elemMatch: {
+                  serviceName: { $regex: searchTerm, $options: "i" },
+                },
+              },
+            },
+          ],
+        },
+      ];
+    }
+
+   // Add date range criteria if both startDate and endDate are provided
+   if (startDateParam && endDateParam) {
+    const startDate = new Date(startDateParam);
+    const endDate = new Date(endDateParam);
+
+    if (!isNaN(startDate) && !isNaN(endDate)) {
+      // Only add date range criteria if startDate and endDate are valid dates
+      query.createdAt = {
+        $gte: startDate,
+        $lte: endDate,
+      };
+    }
+  }
+
+    // Calculate the total count of transactions matching the query
+    const totalCount = await Transaction.countDocuments(query);
+
+    // Find transactions with pagination and populate user, plan, and service information
+    const transactions = await Transaction.find(query)
+      .sort({ updatedAt: -1 }) // Sort by createdAt in descending order
+      .skip(pageSize * (page - 1))
+      .limit(pageSize)
+      .populate({
+        path: "user",
+        select: "firstName lastName email profile",
+        populate: {
+          path: "partnerUser",
+          model: "Partner",
+          select: "partnerName email contact1 contact2 avatar status",
+        },
+      })
+      .populate("customerId", "firstName lastName email") // Populate user information
+      .populate({
+        path: "planId",
+        select: "planName", // Select the fields you want to include from the plan document
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+          select: "serviceName servicePrice", // Select the fields you want to include from the planService document
+        },
+      })
+      .populate("serviceIds", "serviceName servicePrice"); // Populate service information
+
+    res.status(200).json({
+      success: true,
+      count: transactions.length,
+      total: totalCount,
+      pageSize,
+      page,
+      transactions,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// get all transactions in Completed status
+exports.getAllTransactionsCompleted = asyncHandler(async (req, res, next) => {
+  try {
+    const pageSize = Number(req.query.pageSize) || 10;
+    const page = Number(req.query.pageNumber) || 1;
+    const searchTerm = req.query.searchTerm;
+
+    // Parse the date range parameters from the request query
+    const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+    const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
+
+    // Create the query object
+    const query = {transactionStatus: "Completed"};
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      query.$or = [
+        { customerName: { $regex: searchTerm, $options: "i" } },
+        { "customerId.lastName": { $regex: searchTerm, $options: "i" } },
+        { invoiceNumber: { $regex: searchTerm, $options: "i" } },
+        { transactionStatus: { $regex: searchTerm, $options: "i" } },
+        { "planId.planName": { $regex: searchTerm, $options: "i" } },
+        {
+          $and: [
+            { serviceIds: { $exists: true, $not: { $size: 0 } } },
+            {
+              serviceIds: {
+                $elemMatch: {
+                  serviceName: { $regex: searchTerm, $options: "i" },
+                },
+              },
+            },
+          ],
+        },
+      ];
+    }
+
+   // Add date range criteria if both startDate and endDate are provided
+   if (startDateParam && endDateParam) {
+    const startDate = new Date(startDateParam);
+    const endDate = new Date(endDateParam);
+
+    if (!isNaN(startDate) && !isNaN(endDate)) {
+      // Only add date range criteria if startDate and endDate are valid dates
+      query.createdAt = {
+        $gte: startDate,
+        $lte: endDate,
+      };
+    }
+  }
+
+    // Calculate the total count of transactions matching the query
+    const totalCount = await Transaction.countDocuments(query);
+
+    // Find transactions with pagination and populate user, plan, and service information
+    const transactions = await Transaction.find(query)
+      .sort({ updatedAt: -1 }) // Sort by createdAt in descending order
+      .skip(pageSize * (page - 1))
+      .limit(pageSize)
+      .populate({
+        path: "user",
+        select: "firstName lastName email profile",
+        populate: {
+          path: "partnerUser",
+          model: "Partner",
+          select: "partnerName email contact1 contact2 avatar status",
+        },
+      })
+      .populate("customerId", "firstName lastName email") // Populate user information
+      .populate({
+        path: "planId",
+        select: "planName", // Select the fields you want to include from the plan document
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+          select: "serviceName servicePrice", // Select the fields you want to include from the planService document
+        },
+      })
+      .populate("serviceIds", "serviceName servicePrice"); // Populate service information
+
+    res.status(200).json({
+      success: true,
+      count: transactions.length,
+      total: totalCount,
+      pageSize,
+      page,
+      transactions,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// get all transactions in Canceled status
+exports.getAllTransactionsCanceled = asyncHandler(async (req, res, next) => {
+  try {
+    const pageSize = Number(req.query.pageSize) || 10;
+    const page = Number(req.query.pageNumber) || 1;
+    const searchTerm = req.query.searchTerm;
+
+    // Parse the date range parameters from the request query
+    const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+    const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
+
+    // Create the query object
+    const query = {transactionStatus: "Canceled"};
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      query.$or = [
+        { customerName: { $regex: searchTerm, $options: "i" } },
+        { "customerId.lastName": { $regex: searchTerm, $options: "i" } },
+        { invoiceNumber: { $regex: searchTerm, $options: "i" } },
+        { transactionStatus: { $regex: searchTerm, $options: "i" } },
+        { "planId.planName": { $regex: searchTerm, $options: "i" } },
+        {
+          $and: [
+            { serviceIds: { $exists: true, $not: { $size: 0 } } },
+            {
+              serviceIds: {
+                $elemMatch: {
+                  serviceName: { $regex: searchTerm, $options: "i" },
+                },
+              },
+            },
+          ],
+        },
+      ];
+    }
+
+   // Add date range criteria if both startDate and endDate are provided
+   if (startDateParam && endDateParam) {
+    const startDate = new Date(startDateParam);
+    const endDate = new Date(endDateParam);
+
+    if (!isNaN(startDate) && !isNaN(endDate)) {
+      // Only add date range criteria if startDate and endDate are valid dates
+      query.createdAt = {
+        $gte: startDate,
+        $lte: endDate,
+      };
+    }
+  }
+
+    // Calculate the total count of transactions matching the query
+    const totalCount = await Transaction.countDocuments(query);
+
+    // Find transactions with pagination and populate user, plan, and service information
+    const transactions = await Transaction.find(query)
+      .sort({ updatedAt: -1 }) // Sort by createdAt in descending order
+      .skip(pageSize * (page - 1))
+      .limit(pageSize)
+      .populate({
+        path: "user",
+        select: "firstName lastName email profile",
+        populate: {
+          path: "partnerUser",
+          model: "Partner",
+          select: "partnerName email contact1 contact2 avatar status",
+        },
+      })
+      .populate("customerId", "firstName lastName email") // Populate user information
+      .populate({
+        path: "planId",
+        select: "planName", // Select the fields you want to include from the plan document
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+          select: "serviceName servicePrice", // Select the fields you want to include from the planService document
+        },
+      })
+      .populate("serviceIds", "serviceName servicePrice"); // Populate service information
+
+    res.status(200).json({
+      success: true,
+      count: transactions.length,
+      total: totalCount,
+      pageSize,
+      page,
+      transactions,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+
+// get all transactions in Revoked status
+exports.getAllTransactionsRevoked = asyncHandler(async (req, res, next) => {
+  try {
+    const pageSize = Number(req.query.pageSize) || 10;
+    const page = Number(req.query.pageNumber) || 1;
+    const searchTerm = req.query.searchTerm;
+
+    // Parse the date range parameters from the request query
+    const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+    const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
+
+    // Create the query object
+    const query = {transactionStatus: "Revoked"};
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      query.$or = [
+        { customerName: { $regex: searchTerm, $options: "i" } },
+        { "customerId.lastName": { $regex: searchTerm, $options: "i" } },
+        { invoiceNumber: { $regex: searchTerm, $options: "i" } },
+        { transactionStatus: { $regex: searchTerm, $options: "i" } },
+        { "planId.planName": { $regex: searchTerm, $options: "i" } },
+        {
+          $and: [
+            { serviceIds: { $exists: true, $not: { $size: 0 } } },
+            {
+              serviceIds: {
+                $elemMatch: {
+                  serviceName: { $regex: searchTerm, $options: "i" },
+                },
+              },
+            },
+          ],
+        },
+      ];
+    }
+
+   // Add date range criteria if both startDate and endDate are provided
+   if (startDateParam && endDateParam) {
+    const startDate = new Date(startDateParam);
+    const endDate = new Date(endDateParam);
+
+    if (!isNaN(startDate) && !isNaN(endDate)) {
+      // Only add date range criteria if startDate and endDate are valid dates
+      query.createdAt = {
+        $gte: startDate,
+        $lte: endDate,
+      };
+    }
+  }
+
+    // Calculate the total count of transactions matching the query
+    const totalCount = await Transaction.countDocuments(query);
+
+    // Find transactions with pagination and populate user, plan, and service information
+    const transactions = await Transaction.find(query)
+      .sort({ updatedAt: -1 }) // Sort by createdAt in descending order
+      .skip(pageSize * (page - 1))
+      .limit(pageSize)
+      .populate({
+        path: "user",
+        select: "firstName lastName email profile",
+        populate: {
+          path: "partnerUser",
+          model: "Partner",
+          select: "partnerName email contact1 contact2 avatar status",
+        },
+      })
+      .populate("customerId", "firstName lastName email") // Populate user information
+      .populate({
+        path: "planId",
+        select: "planName", // Select the fields you want to include from the plan document
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+          select: "serviceName servicePrice", // Select the fields you want to include from the planService document
+        },
+      })
+      .populate("serviceIds", "serviceName servicePrice"); // Populate service information
+
+    res.status(200).json({
+      success: true,
+      count: transactions.length,
+      total: totalCount,
+      pageSize,
+      page,
+      transactions,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 exports.getTransactionsByCustomerId = asyncHandler(async (req, res, next) => {
   try {
     const customerId = req.params.customerId;
@@ -624,6 +1188,10 @@ exports.getTransactionsByCustomerId = asyncHandler(async (req, res, next) => {
         .json({ success: false, error: "Invalid customerId" });
     }
 
+     // Parse the date range parameters from the request query
+     const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+     const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
+
     // Create the query object
     const query = { customerId };
 
@@ -634,6 +1202,20 @@ exports.getTransactionsByCustomerId = asyncHandler(async (req, res, next) => {
         { transactionId: { $regex: searchTerm, $options: "i" } },
         { paymentMethod: { $regex: searchTerm, $options: "i" } },
       ];
+    }
+
+    // Add date range criteria if both startDate and endDate are provided
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam);
+      const endDate = new Date(endDateParam);
+
+      if (!isNaN(startDate) && !isNaN(endDate)) {
+        // Only add date range criteria if startDate and endDate are valid dates
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
     }
 
     // Calculate the total count of transactions matching the query
@@ -1259,6 +1841,7 @@ exports.revokeTransaction = async (req, res) => {
     transaction.transactionStatus = "Revoked";
     transaction.revokedAmount = transaction.amount;
     transaction.amount = 0;
+    // transaction.revokeReason = revokeReason;
 
     transaction.revokeReason = revokeReason; // Add the reason for revoking the transaction
 
@@ -1526,9 +2109,9 @@ exports.getMyTransactions = asyncHandler(async (req, res, next) => {
     // Parse the search term from the request query
     const searchTerm = req.query.searchTerm;
 
-    // Parse the date range parameters from the request query
-    const startDate = req.query.startDate; // Format: YYYY-MM-DD
-    const endDate = req.query.endDate; // Format: YYYY-MM-DD
+   // Parse the date range parameters from the request query
+   const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+   const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
 
     // Create the query object
     const query = { user: req.user.id };
@@ -1557,11 +2140,17 @@ exports.getMyTransactions = asyncHandler(async (req, res, next) => {
     }
 
     // Add date range criteria if both startDate and endDate are provided
-    if (startDate && endDate) {
-      query.createdAt = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate),
-      };
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam);
+      const endDate = new Date(endDateParam);
+
+      if (!isNaN(startDate) && !isNaN(endDate)) {
+        // Only add date range criteria if startDate and endDate are valid dates
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
     }
 
     // Count the total number of transactions that match the query
@@ -1629,6 +2218,10 @@ exports.getTransactionsByPartnerUser = async (req, res, next) => {
     // Parse the search term from the request query
     const searchTerm = req.query.searchTerm;
 
+    // Parse the date range parameters from the request query
+    const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+    const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
+
     // Create the query object
     const query = { companyPartner: partnerCompanyId };
 
@@ -1653,6 +2246,20 @@ exports.getTransactionsByPartnerUser = async (req, res, next) => {
           ],
         },
       ];
+    }
+
+    // Add date range criteria if both startDate and endDate are provided
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam);
+      const endDate = new Date(endDateParam);
+
+      if (!isNaN(startDate) && !isNaN(endDate)) {
+        // Only add date range criteria if startDate and endDate are valid dates
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
     }
 
     // Count the total number of transactions that match the query
@@ -1723,6 +2330,10 @@ exports.getTransactionsHistory = async (req, res, next) => {
     const searchTerm = req.query.searchTerm;
     const userId = req.params.id;
 
+    // Parse the date range parameters from the request query
+    const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+    const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
+
     // Create the query object
     const query = {
       $and: [
@@ -1752,6 +2363,20 @@ exports.getTransactionsHistory = async (req, res, next) => {
           ],
         },
       ];
+    }
+
+    // Add date range criteria if both startDate and endDate are provided
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam);
+      const endDate = new Date(endDateParam);
+
+      if (!isNaN(startDate) && !isNaN(endDate)) {
+        // Only add date range criteria if startDate and endDate are valid dates
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
     }
 
     // Count the total number of transactions that match the query
@@ -1928,6 +2553,10 @@ exports.getLogedCustomerTransactions = asyncHandler(async (req, res, next) => {
     // Parse the search term from the request query
     const searchTerm = req.query.searchTerm;
 
+    // Parse the date range parameters from the request query
+    const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+    const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
+
     // Create the query object
     const query = { customerId: req.user.id };
 
@@ -1952,6 +2581,20 @@ exports.getLogedCustomerTransactions = asyncHandler(async (req, res, next) => {
           ],
         },
       ];
+    }
+
+    // Add date range criteria if both startDate and endDate are provided
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam);
+      const endDate = new Date(endDateParam);
+
+      if (!isNaN(startDate) && !isNaN(endDate)) {
+        // Only add date range criteria if startDate and endDate are valid dates
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
     }
 
     // Count the total number of transactions that match the query
@@ -2013,6 +2656,10 @@ exports.getTransactionsFromCompany = asyncHandler(async (req, res, next) => {
     // Parse the search term from the request query
     const searchTerm = req.query.searchTerm;
 
+    // Parse the date range parameters from the request query
+    const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+    const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
+
     // Create the query object const transactionID = req.params.id;
     const query = {
       customerCompany: req.params.id,
@@ -2040,6 +2687,20 @@ exports.getTransactionsFromCompany = asyncHandler(async (req, res, next) => {
           ],
         },
       ];
+    }
+
+    // Add date range criteria if both startDate and endDate are provided
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam);
+      const endDate = new Date(endDateParam);
+
+      if (!isNaN(startDate) && !isNaN(endDate)) {
+        // Only add date range criteria if startDate and endDate are valid dates
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
     }
 
     // Count the total number of transactions that match the query
@@ -2377,6 +3038,279 @@ exports.generateInvoicePDF1 = asyncHandler(async (req, res, next) => {
 });
 
 exports.generateInvoicePDF = asyncHandler(async (req, res, next) => {
+  try {
+    const transactionID = req.params.transactionID;
+
+    const transaction = await Transaction.findById(transactionID)
+      .populate("customerId")
+      .populate({
+        path: "user",
+        select: "firstName lastName email profile",
+        populate: {
+          path: "partnerUser",
+          model: "Partner",
+          select: "partnerName email contact1 contact2 avatar status",
+        },
+      })
+      .populate(
+        "serviceIds",
+        "serviceName serviceDescription serviceAreaOfCover"
+      );
+
+    if (!transaction) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Transaction not found" });
+    }
+
+    const formattedAmount = transaction.amount.toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD", // Change the currency code as needed
+      minimumFractionDigits: 2, // Adjust to control the number of decimal places
+    });
+
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([600, 600]);
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=invoice_${transaction._id}.pdf`
+    );
+    res.setHeader("Content-type", "application/pdf");
+
+    const text = "Payment to:";
+    const text2 = "Amount:";
+    const textSize = 11;
+    const fontColor = rgb(0, 0, 0);
+    const mainFontColor = rgb(241 / 255, 95 / 255, 30 / 255);
+
+    // Calculate the width based on font size and text length
+    const textWidth = textSize * text.length;
+
+    const logoImageBytes = fs.readFileSync("controllers/logo.png");
+    const logoImage = await pdfDoc.embedPng(logoImageBytes);
+
+    const { width, height } = page.getSize();
+
+    page.drawText("Invoice", {
+      x: 50,
+      y: height - 80,
+      size: 16,
+      color: mainFontColor,
+      font: await pdfDoc.embedFont("Helvetica-Bold"),
+      align: "center",
+    });
+
+    page.drawText(`Receipt: ${transaction.invoiceNumber}`, {
+      x: 50,
+      y: height - 100,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(`${transaction.updatedAt.toLocaleDateString()}`, {
+      x: 50,
+      y: height - 120,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText("Client Details:", {
+      x: 50,
+      y: height - 160,
+      size: 11,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica-Bold"),
+    });
+
+    page.drawText(`${transaction.customerName}`, {
+      x: 50,
+      y: height - 180,
+      size: 13,
+      color: mainFontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(`${transaction.customerId.email}`, {
+      x: 50,
+      y: height - 200,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(`${transaction.customerId.address}`, {
+      x: 50,
+      y: height - 220,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(
+      `${transaction.customerId.contact1} , ${transaction.customerId.contact2}`,
+      {
+        x: 50,
+        y: height - 240,
+        size: 10,
+        color: fontColor,
+        font: await pdfDoc.embedFont("Helvetica"),
+      }
+    );
+
+    page.drawText(text, {
+      x: width - textWidth - 50,
+      y: height - 160,
+      size: textSize,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica-Bold"),
+    });
+
+    page.drawText(`${transaction.user.partnerUser.partnerName}`, {
+      x: width - textWidth - 50,
+      y: height - 180,
+      size: 13,
+      color: mainFontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(`${transaction.user.partnerUser.email}`, {
+      x: width - textWidth - 50,
+      y: height - 200,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(
+      `${transaction.user.partnerUser.contact1} , ${transaction.user.partnerUser.contact2}`,
+      {
+        x: width - textWidth - 50,
+        y: height - 220,
+        size: 10,
+        color: fontColor,
+        font: await pdfDoc.embedFont("Helvetica"),
+      }
+    );
+
+    page.drawText("Service:", {
+      x: 50,
+      y: height - 300,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawLine({
+      start: { x: 50, y: height - 305 },
+      end: { x: 50 + 500, y: height - 305 },
+      thickness: 1,
+      color: fontColor,
+    });
+
+    page.drawText(`${transaction.serviceIds[0].serviceName}`, {
+      x: 50,
+      y: height - 320,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(`${transaction.serviceIds[0].serviceDescription}`, {
+      x: 50,
+      y: height - 340,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(`${transaction.serviceIds[0].serviceAreaOfCover}`, {
+      x: 50,
+      y: height - 360,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+    page.drawLine({
+      start: { x: 50, y: height - 370 },
+      end: { x: 50 + 500, y: height - 370 },
+      thickness: 1,
+      color: fontColor,
+    });
+
+    page.drawText("Processed by:", {
+      x: 50,
+      y: height - 410,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(
+      `${transaction.user.firstName} ${transaction.user.lastName}`,
+      {
+        x: 50,
+        y: height - 430,
+        size: 13,
+        color: mainFontColor,
+        font: await pdfDoc.embedFont("Helvetica"),
+      }
+    );
+    page.drawText(
+      `${transaction.user.partnerUser.contact1} , ${transaction.user.partnerUser.contact2}`,
+      {
+        x: 50,
+        y: height - 450,
+        size: 11,
+        color: fontColor,
+        font: await pdfDoc.embedFont("Helvetica"),
+      }
+    );
+
+    page.drawText(text2, {
+      x: width - textWidth - 50,
+      y: height - 410,
+      size: 11,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(formattedAmount, {
+      x: width - textWidth - 50,
+      y: height - 430,
+      size: 10,
+      color: mainFontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText("Taxes included", {
+      x: width- textWidth - 50,
+      y: height - 450,
+      size: 11,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    const pdfBytes = await pdfDoc.save();
+
+    const pdfStream = new stream.PassThrough();
+    pdfStream.end(pdfBytes);
+
+    pdfStream.on("data", (chunk) => {
+      res.write(chunk);
+    });
+
+    pdfStream.on("end", () => {
+      res.end();
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+exports.generateMobileInvoicePDF = asyncHandler(async (req, res, next) => {
   try {
     const transactionID = req.params.transactionID;
 
