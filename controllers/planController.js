@@ -23,7 +23,7 @@ exports.createPlan = async (req, res, next) => {
         new ErrorResponse("Plan with the same name already exists", 400)
       );
     }
-
+// 
     const plan = await Plan.create({
       planName,
       planPrice,
