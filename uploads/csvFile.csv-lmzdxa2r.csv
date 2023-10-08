@@ -1,0 +1,8 @@
+firstName;lastName;dob;idType;idNumber;gender;contact1;contact2;email;address;enrolmentDate;memberShipID;monthlyFee;plan
+Antonio1;Samuel1;2023/09/13;Drive Licence;23445;male;2,58845E+11;2,58823E+11;antoniosamuel1@gmail.com;Aeroporto;2023/09/13;a14554dsd;5100;64bdc75c4bb59a887b9749d0
+Antonio2;Samuel2;2023/09/14;Passport;2344R3;female;2,58845E+11;2,58823E+11;antoniosamuel2@gmail.com;Aeroporto;2023/09/14;14547a5s75;5200;64bdc9c34bb59a887b9749fc
+Antonio3;Samuel3;2023/09/15;Voters;45465656456;other;2,58845E+11;2,58823E+11;antoniosamuel3@gmail.com;Aeroporto;2023/09/15;69aae87a5;5300;64bdc75c4bb59a887b9749d0
+Antonio4;Samuel4;2023/09/16;Passport;345677E;female;2,58845E+11;2,58823E+11;antoniosamuel4@gmail.com;Aeroporto;2023/09/16;145aa78998;5400;64bdc9c34bb59a887b9749fc
+Antonio5;Samuel5;2023/09/17;ID;01011239485T;male;2,58845E+11;2,58823E+11;antoniosamuel5@gmail.com;Aeroporto;2023/09/17;985a44578;5600;64bdc9ea4bb59a887b974a00
+Antonio6;Samuel6;2023/09/18;ID;01001234665A;other;2,58845E+11;2,58823E+11;antoniosamuel6@gmail.com;Aeroporto;2023/09/18;7t89sd4157;5700;64bdc75c4bb59a887b9749d0
+Antonio7;Samuel7;2023/09/19;Voters;34343556504;other;2,58845E+11;2,58823E+11;antoniosamuel7@gmail.com;Aeroporto;2023/09/19;98as87545ty;5800;64bdc75c4bb59a887b9749d0
