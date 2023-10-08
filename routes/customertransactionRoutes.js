@@ -26,6 +26,7 @@ const {
   getAllTransactionsCompleted,
   getAllTransactionsCanceled,
   getAllTransactionsRevoked,
+  getLogedManagerTransactions
 } = require("../controllers/customertransactionController");
 const { isAuthenticated, isAdmin, isPartner } = require("../middleware/auth");
 const {
@@ -184,4 +185,14 @@ router.get(
   generateMobileInvoicePDF
 );
 
+router.get(
+  "/get/logedmanagertransactions",
+  isAuthenticated,
+  
+  getLogedManagerTransactions
+);
+
+
 module.exports = router;
+
+

@@ -7,6 +7,7 @@ const {
   getAllCustomerRequests,
   getCustomerRequestsByUser,
   UpdateStatus,
+  getLogedManagerRequests
 } = require("../controllers/customerrequestController");
 const { isAuthenticated, isAdmin, isPartner } = require("../middleware/auth");
 
@@ -47,5 +48,7 @@ router.get(
 );
 
 router.put("/request/status/:id", isAuthenticated, UpdateStatus);
+
+router.get("/request/getfromlogedmanager", isAuthenticated, getLogedManagerRequests);
 
 module.exports = router;

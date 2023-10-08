@@ -5,6 +5,7 @@ const {
   signin,
   logout,
   userProfile,
+  userServices,
   forgotPassword,
   resetPassword,
 } = require("../controllers/authController");
@@ -21,6 +22,7 @@ router.post("/signup", signup);
 router.post("/signin", signin);
 router.get("/logout", logout);
 router.get("/me", isAuthenticated, userProfile);
+router.get("/getmyservices",isAuthenticated,userServices)
 
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);

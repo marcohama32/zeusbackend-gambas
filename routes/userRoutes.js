@@ -4,18 +4,24 @@ const {
   allUsers,
   allCustomersUsers,
   singleUser,
+  singleUserProfile,
   editUser,
   deleteUser,
-  createUserJobsHistory,
   desactiveUser,
   UserByMembershipID
 } = require("../controllers/userController");
-const { isAuthenticated, isAdmin, isPartner } = require("../middleware/auth");
+const { isAuthenticated, isAdmin, isPartner, isManager, isCompanyManager, isCustomerManager } = require("../middleware/auth");
 const { getThisCompanyUsers } = require("../controllers/companyController");
 const {
   createIndividualUser,
   editIndividualUser,
   getAllIndividualCustomer,
+  getAllIndividualCustomerManagerByManagerID,
+  getAllIndividualCustomerManagerByLogedManager,
+  getAllCorporateCustomerManagerByManagerID,  
+  getAllCorporateCustomerManagerByLogedManager,
+  getAllIndividualCorporateCustomerManagerByManagerID,
+  getAllIndividualCorporateCustomerByLogedManager,
   uploadSingleFile,
   uploadMultipleFiles,
   deleteFile,
@@ -47,6 +53,8 @@ const {
   editAgentUser,
   getAllAgentUser,
   updatedAgent,
+  getAllAgentsFromManagerByManagerID,
+  getAllAgentsFromLogedManager
 } = require("../controllers/users/agentEmployerController");
 const {
   createAdminUser,
@@ -61,30 +69,26 @@ const {
   createCorporatelUser,
   editCorporatelUser,
   getAllCorporateCustomer,
+  BulkCreateCorporatelUser
 } = require("../controllers/users/corporateController");
 
 //@auth routes
 // api/route
-router.get("/allcompanyuser/:id", getThisCompanyUsers);
+router.get("/allcompanyuser/:id", isAuthenticated,isCompanyManager, getThisCompanyUsers);
 router.get("/allusers", isAuthenticated, allUsers);
-router.get("/allcustomers", isAuthenticated, allCustomersUsers);
+router.get("/allcustomers", isAuthenticated, isAdmin, allCustomersUsers);
 router.put("/user/edit/:id", upload.single("avatar"), editUser);
 router.put("/user/inactive/:id", isAuthenticated, desactiveUser);
-router.get("/user/:id", isAuthenticated, singleUser);
+// get user by id
+router.get("/user/:id", isAuthenticated,isCustomerManager, singleUser);
+// get user profile by id
+router.get("/userprofile/:id", isAuthenticated, singleUserProfile);
+
 router.delete("/admin/user/delete/:id", isAuthenticated, isAdmin, deleteUser);
-router.post(
-  "/user/jobhistory",
-  upload.single("avatar"),
-  isAuthenticated,
-  isAdmin,
-  createUserJobsHistory
-);
-
-
 
 /////////////////////////Individual Users Routes//////////////////////////
 router.post(
-  "/user/invididual",
+  "/user/invididual/create/customer",
   upload.single("avatar"),
   isAuthenticated,
   isAdmin,
@@ -102,8 +106,44 @@ router.get(
   isAuthenticated,
   getAllIndividualCustomer
 );
+// get all manager-agent individual customer by manager-agent id
+router.get(
+  "/user/invididual/allindividualusermanager/:id",
+  isAuthenticated,
+  getAllIndividualCustomerManagerByManagerID
+);
 
-// Example route using to upload sigle page
+// get all manager individual customer from loged manager our agent
+router.get(
+  "/user/invididual/allindividualusermanager",
+  isAuthenticated,
+  getAllIndividualCustomerManagerByLogedManager
+);
+
+router.get(
+  "/user/corporate/allcorporateusermanager/:id",
+  isAuthenticated,
+  getAllCorporateCustomerManagerByManagerID
+);
+
+router.get(
+  "/user/corporate/allcorporateusermanager",
+  isAuthenticated,
+  getAllCorporateCustomerManagerByLogedManager
+);
+
+router.get(
+  "/user/manager/allcustomersfrommanager/:id",
+  isAuthenticated,
+  getAllIndividualCorporateCustomerManagerByManagerID
+);
+router.get(
+  "/user/manager/allcustomersfromlogedmanager",
+  isAuthenticated,
+  // isCompanyManager,
+  getAllIndividualCorporateCustomerByLogedManager
+);
+// Example route using to upload sigle page  
 router.put(
   "/user/uploadfile/:id",
   upload.single("avatar"),
@@ -117,7 +157,7 @@ router.put(
   "/user/uploadmultiplefiles/:id",
   upload.array("multipleFiles[]"),
   isAuthenticated,
-  isAdmin,
+  // isAdmin,
   uploadMultipleFiles
 );
 router.delete("/admin/file/delete", isAuthenticated, isAdmin, deleteFile);
@@ -130,6 +170,15 @@ router.post(
   isAdmin,
   createCorporatelUser
 );
+
+router.post(
+  "/user/bulk/corporatebulk/:company",
+  upload.single('csvFile'),
+  isAuthenticated,
+  BulkCreateCorporatelUser
+);
+
+
 router.put(
   "/user/corporate/edit/:company",
   upload.single("avatar"),
@@ -160,21 +209,35 @@ router.get(
   isAuthenticated,
   getAllActiveAgents
 );
-//?///////////////////Get all agent//////////////////////////////
+//?///////////////////Get all active manager//////////////////////////////
 router.get(
   "/user/employer/manager/active/get",
   isAuthenticated,
   getAllActiveManagers
 );
-//?///////////////////Get all agent//////////////////////////////
+//?///////////////////Get all active admin////////////////////////////// 
 router.get(
   "/user/employer/admin/active/get",
   isAuthenticated,
   getAllActiveAdmins
 );
 
+//  ////////////////////////////////// get all agents from a manager ID
+router.get(
+  "/user/agent/manageragents/get/:id",
+  isAuthenticated,
+  getAllAgentsFromManagerByManagerID
+);
+
+//  ////////////////////////////////// get all agents from a loged manager 
+router.get(
+  "/user/agent/manageragents/get",
+  isAuthenticated,
+  getAllAgentsFromLogedManager
+);
+
 router.put(
-  "/user/agent/update//:id",
+  "/user/agent/update/:id",
   upload.single("avatar"),
   isAuthenticated,
   isAdmin,
@@ -258,7 +321,7 @@ router.post(
   "/user/agent/create",
   upload.single("avatar"),
   isAuthenticated,
-  isAdmin,
+  isManager, // give access to admin and manager
   createAgentUser
 );
 
