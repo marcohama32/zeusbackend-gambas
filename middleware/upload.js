@@ -1,5 +1,5 @@
-const path = require('path')
-const multer = require('multer')
+const path = require('path');
+const multer = require('multer');
 
 const sanitizeFilename = (name) => {
   return name.replace(/[^a-zA-Z0-9-_.]/g, '_');
@@ -19,24 +19,23 @@ const storage = multer.diskStorage({
   },
 });
 
-  
-  const upload = multer({
-    storage: storage,
-    fileFilter: function (req, file, cb) {
-      // Define the allowed file types
-      const allowedFileTypes = ['.jpg', '.jpeg', '.png', '.pdf', '.doc', '.docx'];
-  
-      // Check if the file extension is allowed
-      const fileExtension = path.extname(file.originalname).toLowerCase();
-      if (allowedFileTypes.includes(fileExtension)) {
-        cb(null, true); // Accept the file
-      } else {
-        cb(new Error('Invalid file type')); // Reject the file
-      }
-    },
-    limits : {
-        fileSize: 1024 * 1024 * 2
-    }
-  });
+const upload = multer({
+  storage: storage,
+  fileFilter: function (req, file, cb) {
+    // Define the allowed file types, including .csv
+    const allowedFileTypes = ['.jpg', '.jpeg', '.png', '.pdf', '.doc', '.docx', '.csv'];
 
-  module.exports = upload
+    // Check if the file extension is allowed
+    const fileExtension = path.extname(file.originalname).toLowerCase();
+    if (allowedFileTypes.includes(fileExtension)) {
+      cb(null, true); // Accept the file
+    } else {
+      cb(new Error('Invalid file type')); // Reject the file
+    }
+  },
+  limits: {
+    fileSize: 1024 * 1024 * 2, // 2 MB file size limit (adjust as needed)
+  },
+});
+
+module.exports = upload;
