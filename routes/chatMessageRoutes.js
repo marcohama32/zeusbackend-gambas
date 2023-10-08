@@ -8,7 +8,7 @@ const upload = require("../middleware/upload");
 router.post("/chat/message",upload.single("senderAvatar"), isAuthenticated, saveChatMessage);
 
 // ... (other routes)
-
+//other
 // @auth chat
 // router.post(
 //   "/chat/message",
