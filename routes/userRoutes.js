@@ -11,7 +11,7 @@ const {
   UserByMembershipID
 } = require("../controllers/userController");
 const { isAuthenticated, isAdmin, isPartner, isManager, isCompanyManager, isCustomerManager } = require("../middleware/auth");
-const { getThisCompanyUsers } = require("../controllers/companyController");
+// const { getThisCompanyUsers } = require("../controllers/companyController");
 const {
   createIndividualUser,
   editIndividualUser,
@@ -74,7 +74,7 @@ const {
 
 //@auth routes
 // api/route
-router.get("/allcompanyuser/:id", isAuthenticated,isCompanyManager, getThisCompanyUsers);
+// router.get("/allcompanyuser/:id", isAuthenticated,isCompanyManager, getThisCompanyUsers);
 router.get("/allusers", isAuthenticated, allUsers);
 router.get("/allcustomers", isAuthenticated, isAdmin, allCustomersUsers);
 router.put("/user/edit/:id", upload.single("avatar"), editUser);
