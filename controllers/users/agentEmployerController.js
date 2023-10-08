@@ -261,4 +261,223 @@ exports.getAllAgentUser = async (req, res, next) => {
   }
 };
 
+// get all agents from a manager
+exports.getAllAgentsFromManagerByManagerID = async (
+  req,
+  res,
+  next
+) => {
+  const managerId = req.params.id; // Get managerId from the route parameter
+  let pageSize = Number(req.query.pageSize) || 10;
+  let page = Number(req.query.pageNumber) || 1;
+  const searchTerm = req.query.searchTerm;
+
+  // Validate pageSize and pageNumber
+  if (pageSize <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageSize. Must be greater than 0",
+    });
+  }
+
+  if (page <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageNumber. Must be greater than 0",
+    });
+  }
+
+  try {
+    let query = {
+      $and: [
+        {
+          $or: [
+            { userType: 3 }
+          ],
+        }, // Users with userType 5 or 8
+        {
+          $or: [
+            { lineManager: managerId }, // Users with the specified manager
+            // { lineManager: managerId }, // Users with the specified line manager
+          ],
+        },
+      ],
+    };
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      query.$and.push({
+        $or: [
+          { firstName: { $regex: searchTerm, $options: "i" } },
+          { lastName: { $regex: searchTerm, $options: "i" } },
+          { idNumber: { $regex: searchTerm, $options: "i" } },
+          { contact1: { $regex: searchTerm, $options: "i" } },
+          { contact2: { $regex: searchTerm, $options: "i" } },
+          { memberShipID: { $regex: searchTerm, $options: "i" } },
+          { relation: { $regex: searchTerm, $options: "i" } },
+        ],
+      });
+    }
+
+    const count = await User.countDocuments(query);
+
+    const users = await User.find(query)
+      .sort({ createdAt: -1 })
+      .select("-password")
+      .populate({
+        path: "accountOwner",
+        populate: {
+          path: "manager",
+          select: "firstName lastName email",
+        },
+      })
+      .populate({
+        path: "plan",
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+        },
+      })
+      .populate({
+        path: "lineManager",
+        select: "firstName lastName email",
+        // populate: {
+        //   path: "lineManager",
+        //   model: "User",
+        //   select: "firstName lastName email",
+        // },
+      })
+      .populate("myMembers")
+      .skip(pageSize * (page - 1))
+      .limit(pageSize);
+
+    // Calculate updated remaining balance for each service in the user's planService
+    const usersWithUpdatedBalance = users.map((user) => {
+      user.planService.forEach((service) => {
+        service.remainingBalance = service.calculateRemainingBalance();
+      });
+      return user;
+    });
+
+    res.status(200).json({
+      success: true,
+      users: usersWithUpdatedBalance,
+      page,
+      pages: Math.ceil(count / pageSize),
+      count,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// get all agents from a loged manager
+exports.getAllAgentsFromLogedManager = async (
+  req,
+  res,
+  next
+) => {
+  const managerId = req.user.id;
+  let pageSize = Number(req.query.pageSize) || 10;
+  let page = Number(req.query.pageNumber) || 1;
+  const searchTerm = req.query.searchTerm;
+
+  // Validate pageSize and pageNumber
+  if (pageSize <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageSize. Must be greater than 0",
+    });
+  }
+
+  if (page <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageNumber. Must be greater than 0",
+    });
+  }
+
+  try {
+    let query = {
+      $and: [
+        {
+          $or: [
+            { userType: 3 }
+          ],
+        }, // Users with userType 5 or 8
+        {
+          $or: [
+            { lineManager: managerId }, // Users with the specified manager
+            // { lineManager: managerId }, // Users with the specified line manager
+          ],
+        },
+      ],
+    };
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      query.$and.push({
+        $or: [
+          { firstName: { $regex: searchTerm, $options: "i" } },
+          { lastName: { $regex: searchTerm, $options: "i" } },
+          { idNumber: { $regex: searchTerm, $options: "i" } },
+          { contact1: { $regex: searchTerm, $options: "i" } },
+          { contact2: { $regex: searchTerm, $options: "i" } },
+          { memberShipID: { $regex: searchTerm, $options: "i" } },
+          { relation: { $regex: searchTerm, $options: "i" } },
+        ],
+      });
+    }
+
+    const count = await User.countDocuments(query);
+
+    const users = await User.find(query)
+      .sort({ createdAt: -1 })
+      .select("-password")
+      .populate({
+        path: "accountOwner",
+        populate: {
+          path: "manager",
+          select: "firstName lastName email",
+        },
+      })
+      .populate({
+        path: "plan",
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+        },
+      })
+      .populate({
+        path: "lineManager",
+        select: "firstName lastName email",
+        // populate: {
+        //   path: "lineManager",
+        //   model: "User",
+        //   select: "firstName lastName email",
+        // },
+      })
+      .populate("myMembers")
+      .skip(pageSize * (page - 1))
+      .limit(pageSize);
+
+    // Calculate updated remaining balance for each service in the user's planService
+    const usersWithUpdatedBalance = users.map((user) => {
+      user.planService.forEach((service) => {
+        service.remainingBalance = service.calculateRemainingBalance();
+      });
+      return user;
+    });
+
+    res.status(200).json({
+      success: true,
+      users: usersWithUpdatedBalance,
+      page,
+      pages: Math.ceil(count / pageSize),
+      count,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
 // exports.getAllIndividualCustomer = getAllIndividualCustomer;

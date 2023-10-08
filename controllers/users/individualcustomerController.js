@@ -288,81 +288,118 @@ exports.editIndividualUser = asyncHandler(async (req, res, next) => {
   });
 });
 
-// exports.getAllIndividualCustomer = async (req, res, next) => {
-//   let pageSize = Number(req.query.pageSize) || 10;
-//   let page = Number(req.query.pageNumber) || 1;
-//   const searchTerm = req.query.searchTerm; // Extract searchTerm from query params
-
-//   // Validate pageSize and pageNumber
-//   if (pageSize <= 0) {
-//     return res.status(400).json({ success: false, error: "Invalid pageSize. Must be greater than 0" });
-//   }
-
-//   if (page <= 0) {
-//     return res.status(400).json({ success: false, error: "Invalid pageNumber. Must be greater than 0" });
-//   }
-
-//   try {
-//     let query = { userType: 5 };
-
-//     if (searchTerm) {
-//       query = {
-//         $and: [
-//           { userType: 5 },
-//           {
-//             $or: [
-//               { firstName: { $regex: searchTerm, $options: "i" } },
-//               { lastName: { $regex: searchTerm, $options: "i" } },
-//               { idNumber: { $regex: searchTerm, $options: "i" } },
-//               { contact1: { $regex: searchTerm, $options: "i" } },
-//               { contact2: { $regex: searchTerm, $options: "i" } },
-//               { memberShipID: { $regex: searchTerm, $options: "i" } },
-//               { relation: { $regex: searchTerm, $options: "i" } },
-//               // Add other fields you want to search here
-//             ],
-//           },
-//         ],
-//       };
-
-//       // Check if searchTerm is a valid date and add it to the query
-//       const dateSearch = new Date(searchTerm);
-//       if (!isNaN(dateSearch)) {
-//         query.$and.push({ enrolmentDate: dateSearch });
-//       }
-//     }
-
-//     const count = await User.countDocuments(query);
-
-//     const userIndividual = await User.find(query)
-//       .sort({ createdAt: -1 })
-//       .select("-password")
-//       .populate({
-//         path: "plan",
-//         populate: {
-//           path: "planService",
-//           model: "PlanServices", // Replace with the actual model name for PlanServices
-//         },
-//       })
-//       .populate({
-//         path: "user",
-//         select: "-password",
-//       })
-//       .skip(pageSize * (page - 1))
-//       .limit(pageSize);
-
-//     res.status(200).json({
-//       success: true,
-//       userIndividual,
-//       page,
-//       pages: Math.ceil(count / pageSize),
-//       count,
-//     });
-//   } catch (error) {
-//     return next(error);
-//   }
-// };
 
 exports.getAllIndividualCustomer = async (req, res, next) => {
+  let pageSize = Number(req.query.pageSize) || 10;
+  let page = Number(req.query.pageNumber) || 1;
+  const searchTerm = req.query.searchTerm;
+  // Parse the date range parameters from the request query
+  const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+  const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
+  
+  // Validate pageSize and pageNumber
+  if (pageSize <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageSize. Must be greater than 0",
+    });
+  }
+
+  if (page <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageNumber. Must be greater than 0",
+    });
+  }
+
+  try {
+    let query = { $or: [{ userType: 5 }, { userType: 8 }] }; // Users with userType 5 or 8
+
+    if (searchTerm) {
+      query = {
+        $and: [
+          {
+            $or: [
+              { firstName: { $regex: searchTerm, $options: "i" } },
+              { lastName: { $regex: searchTerm, $options: "i" } },
+              { idNumber: { $regex: searchTerm, $options: "i" } },
+              { contact1: { $regex: searchTerm, $options: "i" } },
+              { contact2: { $regex: searchTerm, $options: "i" } },
+              { memberShipID: { $regex: searchTerm, $options: "i" } },
+              { relation: { $regex: searchTerm, $options: "i" } },
+            ],
+          },
+        ],
+      };
+
+      if (startDateParam && endDateParam) {
+        const startDate = new Date(startDateParam);
+        const endDate = new Date(endDateParam);
+        if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
+          // Only add date range criteria if startDate and endDate are valid dates
+          query.createdAt = {
+            $gte: startDate,
+            $lte: endDate,
+          };
+        }
+      }
+
+      const dateSearch = new Date(searchTerm);
+      if (!isNaN(dateSearch)) {
+        query.$and.push({ enrolmentDate: dateSearch });
+      }
+    }
+
+    const count = await User.countDocuments(query);
+
+    const users = await User.find(query)
+      .sort({ createdAt: -1 })
+      .select("-password")
+      .populate({
+        path: "accountOwner",
+        populate: {
+          path: "manager",
+          select: "firstName lastName email",
+        },
+      })
+      .populate({
+        path: "plan",
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+        },
+      })
+      .populate("manager")
+      .populate({
+        path: "user",
+        select: "firstName lastName email",
+      })
+      .populate("myMembers")
+      .skip(pageSize * (page - 1))
+      .limit(pageSize);
+
+    // Calculate updated remaining balance for each service in the user's planService
+    const usersWithUpdatedBalance = users.map((user) => {
+      user.planService.forEach((service) => {
+        service.remainingBalance = service.calculateRemainingBalance();
+      });
+      return user;
+    });
+
+    res.status(200).json({
+      success: true,
+      users: usersWithUpdatedBalance,
+      page,
+      pages: Math.ceil(count / pageSize),
+      count,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// get all individual customer for a manager:
+exports.getAllIndividualCustomerManager1 = async (req, res, next) => {
   let pageSize = Number(req.query.pageSize) || 10;
   let page = Number(req.query.pageNumber) || 1;
   const searchTerm = req.query.searchTerm;
@@ -427,10 +464,14 @@ exports.getAllIndividualCustomer = async (req, res, next) => {
           model: "PlanServices",
         },
       })
-      .populate("manager")
       .populate({
-        path: "user",
+        path: "manager",
         select: "firstName lastName email",
+        populate: {
+          path: "lineManager",
+          model: "User",
+          select: "firstName lastName email",
+        },
       })
       .populate("myMembers")
       .skip(pageSize * (page - 1))
@@ -455,6 +496,754 @@ exports.getAllIndividualCustomer = async (req, res, next) => {
     return next(error);
   }
 };
+
+// ----------------------------------------------Manager-----------------------------------------------
+
+exports.getAllIndividualCustomerManagerByManagerID = async (req, res, next) => {
+  const managerId = req.params.id; // Get managerId from the route parameter
+  let pageSize = Number(req.query.pageSize) || 10;
+  let page = Number(req.query.pageNumber) || 1;
+  const searchTerm = req.query.searchTerm;
+  // Parse the date range parameters from the request query
+  const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+  const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
+  // Validate pageSize and pageNumber
+  if (pageSize <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageSize. Must be greater than 0",
+    });
+  }
+
+  if (page <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageNumber. Must be greater than 0",
+    });
+  }
+
+  try {
+    let query = {
+      $and: [
+        { $or: [{ userType: 5 }, { userType: 8 }] }, // Users with userType 5 or 8
+        {
+          $or: [
+            { manager: managerId }, // Users with the specified manager
+            // { lineManager: managerId }, // Users with the specified line manager
+          ],
+        },
+      ],
+    };
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      query.$and.push({
+        $or: [
+          { firstName: { $regex: searchTerm, $options: "i" } },
+          { lastName: { $regex: searchTerm, $options: "i" } },
+          { idNumber: { $regex: searchTerm, $options: "i" } },
+          { contact1: { $regex: searchTerm, $options: "i" } },
+          { contact2: { $regex: searchTerm, $options: "i" } },
+          { memberShipID: { $regex: searchTerm, $options: "i" } },
+          { relation: { $regex: searchTerm, $options: "i" } },
+        ],
+      });
+    }
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam);
+      const endDate = new Date(endDateParam);
+      if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
+        // Only add date range criteria if startDate and endDate are valid dates
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
+    }
+
+    const count = await User.countDocuments(query);
+
+    const users = await User.find(query)
+      .sort({ createdAt: -1 })
+      .select("-password")
+      .populate({
+        path: "accountOwner",
+        populate: {
+          path: "manager",
+          select: "firstName lastName email",
+        },
+      })
+      .populate({
+        path: "plan",
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+        },
+      })
+      .populate({
+        path: "manager",
+        select: "firstName lastName email",
+        populate: {
+          path: "lineManager",
+          model: "User",
+          select: "firstName lastName email",
+        },
+      })
+      .populate("myMembers")
+      .skip(pageSize * (page - 1))
+      .limit(pageSize);
+
+    // Calculate updated remaining balance for each service in the user's planService
+    const usersWithUpdatedBalance = users.map((user) => {
+      user.planService.forEach((service) => {
+        service.remainingBalance = service.calculateRemainingBalance();
+      });
+      return user;
+    });
+
+    res.status(200).json({
+      success: true,
+      users: usersWithUpdatedBalance,
+      page,
+      pages: Math.ceil(count / pageSize),
+      count,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// get All Individual Customer Manager By Loged Manager our Agent  const managerId = req.user.id;
+exports.getAllIndividualCustomerManagerByLogedManager = async (
+  req,
+  res,
+  next
+) => {
+  const managerId = req.user.id; // Get managerId from the route parameter
+  let pageSize = Number(req.query.pageSize) || 10;
+  let page = Number(req.query.pageNumber) || 1;
+  const searchTerm = req.query.searchTerm;
+
+  // Validate pageSize and pageNumber
+  if (pageSize <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageSize. Must be greater than 0",
+    });
+  }
+
+  if (page <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageNumber. Must be greater than 0",
+    });
+  }
+
+  try {
+    let query = {
+      $and: [
+        { $or: [{ userType: 5 }, { userType: 8 }] }, // Users with userType 5 or 8
+        {
+          $or: [
+            { manager: managerId }, // Users with the specified manager
+            // { lineManager: managerId }, // Users with the specified line manager
+          ],
+        },
+      ],
+    };
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      query.$and.push({
+        $or: [
+          { firstName: { $regex: searchTerm, $options: "i" } },
+          { lastName: { $regex: searchTerm, $options: "i" } },
+          { idNumber: { $regex: searchTerm, $options: "i" } },
+          { contact1: { $regex: searchTerm, $options: "i" } },
+          { contact2: { $regex: searchTerm, $options: "i" } },
+          { memberShipID: { $regex: searchTerm, $options: "i" } },
+          { relation: { $regex: searchTerm, $options: "i" } },
+        ],
+      });
+    }
+
+    const count = await User.countDocuments(query);
+
+    const users = await User.find(query)
+      .sort({ createdAt: -1 })
+      .select("-password")
+      .populate({
+        path: "accountOwner",
+        populate: {
+          path: "manager",
+          select: "firstName lastName email",
+        },
+      })
+      .populate({
+        path: "plan",
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+        },
+      })
+      .populate({
+        path: "manager",
+        select: "firstName lastName email",
+        populate: {
+          path: "lineManager",
+          model: "User",
+          select: "firstName lastName email",
+        },
+      })
+      .populate("myMembers")
+      .skip(pageSize * (page - 1))
+      .limit(pageSize);
+
+    // Calculate updated remaining balance for each service in the user's planService
+    const usersWithUpdatedBalance = users.map((user) => {
+      user.planService.forEach((service) => {
+        service.remainingBalance = service.calculateRemainingBalance();
+      });
+      return user;
+    });
+
+    res.status(200).json({
+      success: true,
+      users: usersWithUpdatedBalance,
+      page,
+      pages: Math.ceil(count / pageSize),
+      count,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// get All Individual Customer Manager By Loged Manager our Agent  const managerId = req.user.id;
+exports.getAllCorporateCustomerManagerByLogedManager = async (req,res,next) => {
+  const managerId = req.user.id; // Get managerId from the route parameter
+  let pageSize = Number(req.query.pageSize) || 10;
+  let page = Number(req.query.pageNumber) || 1;
+  const searchTerm = req.query.searchTerm;
+
+  // Validate pageSize and pageNumber
+  if (pageSize <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageSize. Must be greater than 0",
+    });
+  }
+
+  if (page <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageNumber. Must be greater than 0",
+    });
+  }
+
+  try {
+    let query = {
+      $and: [
+        { $or: [{ userType: 4 }, { userType: 7 }] }, // Users with userType 5 or 8
+        {
+          $or: [
+            { manager: managerId }, // Users with the specified manager
+            // { lineManager: managerId }, // Users with the specified line manager
+          ],
+        },
+      ],
+    };
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      query.$and.push({
+        $or: [
+          { firstName: { $regex: searchTerm, $options: "i" } },
+          { lastName: { $regex: searchTerm, $options: "i" } },
+          { idNumber: { $regex: searchTerm, $options: "i" } },
+          { contact1: { $regex: searchTerm, $options: "i" } },
+          { contact2: { $regex: searchTerm, $options: "i" } },
+          { memberShipID: { $regex: searchTerm, $options: "i" } },
+          { relation: { $regex: searchTerm, $options: "i" } },
+        ],
+      });
+    }
+
+    const count = await User.countDocuments(query);
+
+    const users = await User.find(query)
+      .sort({ createdAt: -1 })
+      .select("-password")
+      .populate({
+        path: "accountOwner",
+        populate: {
+          path: "manager",
+          select: "firstName lastName email",
+        },
+      })
+      .populate({
+        path: "plan",
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+        },
+      })
+      .populate({
+        path: "manager",
+        select: "firstName lastName email",
+        populate: {
+          path: "lineManager",
+          model: "User",
+          select: "firstName lastName email",
+        },
+      })
+      .populate("myMembers")
+      .skip(pageSize * (page - 1))
+      .limit(pageSize);
+
+    // Calculate updated remaining balance for each service in the user's planService
+    const usersWithUpdatedBalance = users.map((user) => {
+      user.planService.forEach((service) => {
+        service.remainingBalance = service.calculateRemainingBalance();
+      });
+      return user;
+    });
+
+    res.status(200).json({
+      success: true,
+      users: usersWithUpdatedBalance,
+      page,
+      pages: Math.ceil(count / pageSize),
+      count,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.getAllCorporateCustomerManagerByManagerID = async (req, res, next) => {
+  const managerId = req.params.id; // Get managerId from the route parameter
+  let pageSize = Number(req.query.pageSize) || 10;
+  let page = Number(req.query.pageNumber) || 1;
+  const searchTerm = req.query.searchTerm;
+
+  // Validate pageSize and pageNumber
+  if (pageSize <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageSize. Must be greater than 0",
+    });
+  }
+
+  if (page <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageNumber. Must be greater than 0",
+    });
+  }
+
+  try {
+    let query = {
+      $and: [
+        { $or: [{ userType: 4 }, { userType: 7 }] }, // Users with userType 5 or 8
+        {
+          $or: [
+            { manager: managerId }, // Users with the specified manager
+            // { lineManager: managerId }, // Users with the specified line manager
+          ],
+        },
+      ],
+    };
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      query.$and.push({
+        $or: [
+          { firstName: { $regex: searchTerm, $options: "i" } },
+          { lastName: { $regex: searchTerm, $options: "i" } },
+          { idNumber: { $regex: searchTerm, $options: "i" } },
+          { contact1: { $regex: searchTerm, $options: "i" } },
+          { contact2: { $regex: searchTerm, $options: "i" } },
+          { memberShipID: { $regex: searchTerm, $options: "i" } },
+          { relation: { $regex: searchTerm, $options: "i" } },
+        ],
+      });
+    }
+
+    const count = await User.countDocuments(query);
+
+    const users = await User.find(query)
+      .sort({ createdAt: -1 })
+      .select("-password")
+      .populate({
+        path: "accountOwner",
+        populate: {
+          path: "manager",
+          select: "firstName lastName email",
+        },
+      })
+      .populate({
+        path: "plan",
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+        },
+      })
+      .populate({
+        path: "manager",
+        select: "firstName lastName email",
+        populate: {
+          path: "lineManager",
+          model: "User",
+          select: "firstName lastName email",
+        },
+      })
+      .populate("myMembers")
+      .skip(pageSize * (page - 1))
+      .limit(pageSize);
+
+    // Calculate updated remaining balance for each service in the user's planService
+    const usersWithUpdatedBalance = users.map((user) => {
+      user.planService.forEach((service) => {
+        service.remainingBalance = service.calculateRemainingBalance();
+      });
+      return user;
+    });
+
+    res.status(200).json({
+      success: true,
+      users: usersWithUpdatedBalance,
+      page,
+      pages: Math.ceil(count / pageSize),
+      count,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// brings all customers from a especific manager
+exports.getAllIndividualCorporateCustomerManagerByManagerID = async (
+  req,
+  res,
+  next
+) => {
+  const managerId = req.params.id; // Get managerId from the route parameter
+  let pageSize = Number(req.query.pageSize) || 10;
+  let page = Number(req.query.pageNumber) || 1;
+  const searchTerm = req.query.searchTerm;
+
+  // Validate pageSize and pageNumber
+  if (pageSize <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageSize. Must be greater than 0",
+    });
+  }
+
+  if (page <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageNumber. Must be greater than 0",
+    });
+  }
+
+  try {
+    let query = {
+      $and: [
+        {
+          $or: [
+            { userType: 4 },
+            { userType: 7 },
+            { userType: 5 },
+            { userType: 8 },
+          ],
+        }, // Users with userType 5 or 8
+        {
+          $or: [
+            { manager: managerId }, // Users with the specified manager
+            // { lineManager: managerId }, // Users with the specified line manager
+          ],
+        },
+      ],
+    };
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      query.$and.push({
+        $or: [
+          { firstName: { $regex: searchTerm, $options: "i" } },
+          { lastName: { $regex: searchTerm, $options: "i" } },
+          { idNumber: { $regex: searchTerm, $options: "i" } },
+          { contact1: { $regex: searchTerm, $options: "i" } },
+          { contact2: { $regex: searchTerm, $options: "i" } },
+          { memberShipID: { $regex: searchTerm, $options: "i" } },
+          { relation: { $regex: searchTerm, $options: "i" } },
+        ],
+      });
+    }
+
+    const count = await User.countDocuments(query);
+
+    const users = await User.find(query)
+      .sort({ createdAt: -1 })
+      .select("-password")
+      .populate({
+        path: "accountOwner",
+        populate: {
+          path: "manager",
+          select: "firstName lastName email",
+        },
+      })
+      .populate({
+        path: "plan",
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+        },
+      })
+      .populate({
+        path: "manager",
+        select: "firstName lastName email",
+        populate: {
+          path: "lineManager",
+          model: "User",
+          select: "firstName lastName email",
+        },
+      })
+      .populate("myMembers")
+      .skip(pageSize * (page - 1))
+      .limit(pageSize);
+
+    // Calculate updated remaining balance for each service in the user's planService
+    const usersWithUpdatedBalance = users.map((user) => {
+      user.planService.forEach((service) => {
+        service.remainingBalance = service.calculateRemainingBalance();
+      });
+      return user;
+    });
+
+    res.status(200).json({
+      success: true,
+      users: usersWithUpdatedBalance,
+      page,
+      pages: Math.ceil(count / pageSize),
+      count,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// brings all customers from a loged manager
+// Bring all customers from a logged manager including both manager and line manager
+exports.getAllIndividualCorporateCustomerByLogedManager1 = async (req, res, next) => {
+  try {
+    const managerId = req.user.id;
+    const pageSize = Number(req.query.pageSize) || 10;
+    const page = Number(req.query.pageNumber) || 1;
+    const searchTerm = req.query.searchTerm;
+
+    if (pageSize <= 0 || page <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid pageSize or pageNumber. Both must be greater than 0",
+      });
+    }
+
+    // Define the base query
+    const baseQuery = {
+      $and: [
+        {
+          $or: [{ userType: 4 }, { userType: 7 }, { userType: 5 }, { userType: 8 }],
+        },
+        {
+          $or: [{ manager: managerId }],
+        },
+      ],
+    };
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      baseQuery.$and.push({
+        $or: [
+          { firstName: { $regex: searchTerm, $options: "i" } },
+          { lastName: { $regex: searchTerm, $options: "i" } },
+          { idNumber: { $regex: searchTerm, $options: "i" } },
+          { contact1: { $regex: searchTerm, $options: "i" } },
+          { contact2: { $regex: searchTerm, $options: "i" } },
+          { memberShipID: { $regex: searchTerm, $options: "i" } },
+          { relation: { $regex: searchTerm, $options: "i" } },
+        ],
+      });
+    }
+
+    // Find users that match the base query
+    const users = await User.find(baseQuery)
+      .sort({ createdAt: -1 })
+      .select("-password")
+      .populate({
+        path: "accountOwner",
+        populate: {
+          path: "manager",
+          select: "firstName lastName email",
+        },
+      })
+      .populate({
+        path: "plan",
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+        },
+      })
+      .populate({
+        path: "manager",
+        select: "firstName lastName email",
+        populate: {
+          path: "lineManager",
+          model: "User",
+          select: "firstName lastName email",
+        },
+      })
+      .populate("myMembers")
+      .skip(pageSize * (page - 1))
+      .limit(pageSize);
+
+    // Calculate updated remaining balance for each service in the user's planService
+    const usersWithUpdatedBalance = users.map((user) => {
+      user.planService.forEach((service) => {
+        service.remainingBalance = service.calculateRemainingBalance();
+      });
+      return user;
+    });
+
+    res.status(200).json({
+      success: true,
+      users: usersWithUpdatedBalance,
+      page,
+      pages: Math.ceil(users.length / pageSize),
+      count: users.length,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.getAllIndividualCorporateCustomerByLogedManager = async (req, res, next) => {
+  console.log("Here");
+  const managerId = req.user.id; // Get managerId from the route parameter
+  let pageSize = Number(req.query.pageSize) || 10;
+  let page = Number(req.query.pageNumber) || 1;
+  const searchTerm = req.query.searchTerm;
+
+  // Validate pageSize and pageNumber
+  if (pageSize <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageSize. Must be greater than 0",
+    });
+  }
+
+  if (page <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageNumber. Must be greater than 0",
+    });
+  }
+
+  try {
+    let query = {
+      $and: [
+        { $or: [{ userType: 4 }, { userType: 7 }, { userType: 5 }, { userType: 8 }] },
+        {
+          $or: [
+            { manager: managerId }, // Users with the specified manager
+          ],
+        },
+      ],
+    };
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      query.$and.push({
+        $or: [
+          { firstName: { $regex: searchTerm, $options: "i" } },
+          { lastName: { $regex: searchTerm, $options: "i" } },
+          { idNumber: { $regex: searchTerm, $options: "i" } },
+          { contact1: { $regex: searchTerm, $options: "i" } },
+          { contact2: { $regex: searchTerm, $options: "i" } },
+          { memberShipID: { $regex: searchTerm, $options: "i" } },
+          { relation: { $regex: searchTerm, $options: "i" } },
+        ],
+      });
+    }
+
+    const count = await User.countDocuments(query);
+
+    const users = await User.find(query)
+      .sort({ createdAt: -1 })
+      .select("-password")
+      .populate({
+        path: "accountOwner",
+        populate: {
+          path: "manager",
+          select: "firstName lastName email",
+        },
+      })
+      .populate({
+        path: "plan",
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+        },
+      })
+      .populate({
+        path: "manager",
+        select: "firstName lastName email",
+        populate: {
+          path: "lineManager",
+          model: "User",
+          select: "firstName lastName email",
+        },
+      })
+      .populate("myMembers")
+      .skip(pageSize * (page - 1))
+      .limit(pageSize);
+
+    // Create a new array to store the flattened users
+    const flattenedUsers = [];
+
+    // Iterate through the users and add the main user and their myMembers to the flattenedUsers
+    users.forEach((user) => {
+      flattenedUsers.push(user); // Add the main user
+      if (user.myMembers.length > 0) {
+        flattenedUsers.push(...user.myMembers); // Add myMembers if present
+      }
+    });
+
+    // Calculate updated remaining balance for each service in the user's planService
+    const usersWithUpdatedBalance = flattenedUsers.map((user) => {
+      user.planService.forEach((service) => {
+        service.remainingBalance = service.calculateRemainingBalance();
+      });
+      return user;
+    });
+
+    res.status(200).json({
+      success: true,
+      users: usersWithUpdatedBalance,
+      page,
+      pages: Math.ceil(count / pageSize),
+      count,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+
+
+// ----------------------------------------------Agent-----------------------------------------------
 
 const fs = require("fs");
 const path = require("path");
@@ -506,5 +1295,3 @@ exports.deleteFile = async (req, res, next) => {
     return next(error);
   }
 };
-
-

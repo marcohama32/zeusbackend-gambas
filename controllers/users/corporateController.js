@@ -118,6 +118,483 @@ exports.createCorporatelUser = asyncHandler(async (req, res, next) => {
   }
 });
 
+// Bulk create corporate user
+exports.BulkCreateCorporatelUser2 = async (req, res, next) => {
+  console.log('Function is called');
+  try {
+    const company = req.params.company;
+    const csvContent = req.body.csvContent; // Access the CSV content from the request body
+    const { manager } = req.body;
+
+    console.log('Company:', company);
+    console.log('Manager:', manager);
+
+    if (!csvContent) {
+      console.log('No CSV content provided');
+      return res.status(400).json({ error: 'No CSV content provided' });
+    }
+
+    const users = [];
+
+    // Parse the CSV content
+    csvContent.split(/\r?\n/).forEach((line, index) => {
+      if (index === 0 || !line.trim()) return; // Skip the header row
+      const [
+        firstName,
+        lastName,
+        dob,
+        idType,
+        idNumber,
+        gender,
+        contact1,
+        contact2,
+        email,
+        address,
+        enrolmentDate,
+        memberShipID,
+        monthlyFee,
+        plan,
+      ] = line.split(';'); // Adjust this based on your CSV structure
+
+      console.log('Line:', line);
+      console.log('Parsed Data:', {
+        firstName,
+        lastName,
+        dob,
+        idType,
+        idNumber,
+        gender,
+        contact1,
+        contact2,
+        email,
+        address,
+        enrolmentDate,
+        memberShipID,
+        monthlyFee,
+        plan,
+      });
+
+      // Remove commas from contact1 and contact2 and parse them as numbers
+  const parsedContact1 = parseFloat(contact1.replace(/,/g, ''));
+  const parsedContact2 = parseFloat(contact2.replace(/,/g, ''));
+
+      // Create an object with user data
+      const user = {
+        dob,
+        idNumber,
+        idType,
+        address,
+        contact1,
+        contact2,
+        email,
+        enrolmentDate,
+        memberShipID,
+        firstName,
+        gender,
+        lastName,
+        manager,
+        monthlyFee,
+        plan,
+        relation: 'Main',
+        role: 4,
+        avatar: '', // You can set this to an empty string for now
+        company,
+        userType: 4,
+      };
+
+      console.log('User Data:', user);
+
+      // Validate user data here (similar to your existing code)
+      const requiredFields = [
+        dob,
+        idNumber,
+        idType,
+        address,
+        contact1,
+        contact2,
+        email,
+        enrolmentDate,
+        memberShipID,
+        firstName,
+        manager,
+        gender,
+        lastName,
+        monthlyFee,
+        plan,
+        company,
+      ];
+
+      if (requiredFields.some((field) => !field)) {
+        console.log('Validation Error: Fields cannot be null');
+        throw new Error('Fields cannot be null');
+      }
+
+      if (isNaN(contact1) || isNaN(contact2) || isNaN(monthlyFee)) {
+        console.log('Validation Error: Validate all fields');
+        throw new Error('Validate all fields');
+      }
+
+      users.push(user);
+    });
+
+    // Now, 'users' array contains user data from the CSV content
+    // You can loop through 'users' and create users in your database
+
+    console.log('Users:', users);
+
+    const createdUsers = await Promise.all(users.map(async (user) => {
+      // Use the same hashing logic as in your model's pre-save hook
+      let hashedPassword = user.password;
+      if (!hashedPassword) {
+        hashedPassword = await bcrypt.hash('mediplus', 10);
+      }
+
+      // Create the user in your database (similar to your existing code)
+      const customer = await User.create({
+        ...user,
+        password: hashedPassword,
+        user: req.user.id,
+      });
+
+      return customer;
+    }));
+
+    console.log('Created Users:', createdUsers);
+
+    res.status(201).json({
+      success: true,
+      customers: createdUsers,
+    });
+  } catch (error) {
+    console.error('Error:', error);
+
+    // Handle all errors consistently and send detailed error responses
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
+// Bulk create corporate user
+exports.BulkCreateCorporatelUser1 = async (req, res, next) => {
+  try {
+    const company = req.params.company;
+    const csvContent = req.body.csvContent; // Access the CSV content from the request body
+    const { manager } = req.body;
+
+    if (!csvContent) {
+      return res.status(400).json({ error: 'No CSV content provided' });
+    }
+
+    const users = [];
+
+    // Parse the CSV content
+    csvContent.split(/\r?\n/).forEach((line, index) => {
+      if (index === 0 || !line.trim()) return; // Skip the header row
+      const [
+        firstName,
+        lastName,
+        dob,
+        idType,
+        idNumber,
+        gender,
+        contact1,
+        contact2,
+        email,
+        address,
+        enrolmentDate,
+        memberShipID,
+        monthlyFee,
+        planId, // Assuming plan ID is included in the CSV
+      ] = line.split(';'); // Adjust this based on your CSV structure
+
+      // Check if the provided plan ID is valid
+      const plan = Plan.findById(planId);
+
+      if (!plan) {
+        return res.status(400).json({ error: 'Invalid plan ID' });
+      }
+
+      // Remove commas from contact1 and contact2 and parse them as numbers
+  const parsedContact1 = parseFloat(contact1.replace(/,/g, ''));
+  const parsedContact2 = parseFloat(contact2.replace(/,/g, ''));
+
+      // Create an object with user data
+      const user = {
+        dob,
+        idNumber,
+        idType,
+        address,
+        contact1,
+        contact2,
+        email,
+        enrolmentDate,
+        memberShipID,
+        firstName,
+        gender,
+        lastName,
+        manager,
+        monthlyFee,
+        plan: planId, // Set the plan to the valid plan ID
+        relation: 'Main',
+        role: 4,
+        avatar: '', // You can set this to an empty string for now
+        company,
+        userType: 4,
+      };
+
+      // Validate user data here (similar to your existing code)
+      const requiredFields = [
+        dob,
+        idNumber,
+        idType,
+        address,
+        contact1,
+        contact2,
+        email,
+        enrolmentDate,
+        memberShipID,
+        firstName,
+        manager,
+        gender,
+        lastName,
+        monthlyFee,
+        planId, // Added planId to the required fields
+        company,
+      ];
+
+      if (requiredFields.some((field) => !field)) {
+        return res.status(400).json({ error: 'Fields cannot be null' });
+      }
+
+      if (isNaN(contact1) || isNaN(contact2) || isNaN(monthlyFee)) {
+        return res.status(400).json({ error: 'Validate all fields' });
+      }
+
+      users.push(user);
+    });
+
+    // Now, 'users' array contains user data from the CSV content
+    // You can loop through 'users' and create users in your database
+
+    const createdUsers = await Promise.all(users.map(async (user) => {
+      // Use the same hashing logic as in your model's pre-save hook
+      let hashedPassword = user.password;
+      if (!hashedPassword) {
+        hashedPassword = await bcrypt.hash('mediplus', 10);
+      }
+
+      // Create the user in your database (similar to your existing code)
+      const customer = await User.create({
+        ...user,
+        password: hashedPassword,
+        user: req.user.id,
+      });
+
+      return customer;
+    }));
+
+    res.status(201).json({
+      success: true,
+      customers: createdUsers,
+    });
+  } catch (error) {
+    console.error('Error:', error);
+
+    // Handle all errors consistently and send detailed error responses
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
+exports.BulkCreateCorporatelUser = async (req, res, next) => {
+
+  try {
+    const company = req.params.company;
+    const csvContent = req.body.csvContent; // Access the CSV content from the request body
+    const { manager } = req.body;
+
+
+    if (!csvContent) {
+
+      return res.status(400).json({ error: 'No CSV content provided' });
+    }
+
+    const users = [];
+
+    // Parse the CSV content
+    const lines = csvContent.split(/\r?\n/);
+
+    for (let index = 1; index < lines.length; index++) {
+      const line = lines[index];
+
+      // Skip empty lines
+      if (!line.trim()) continue;
+
+      const [
+        firstName,
+        lastName,
+        dob,
+        idType,
+        idNumber,
+        gender,
+        contact1,
+        contact2,
+        email,
+        address,
+        enrolmentDate,
+        memberShipID,
+        monthlyFee,
+        plan,
+      ] = line.split(';'); // Adjust this based on your CSV structure
+
+      // const plans = Plan.findById(plan);
+
+      // if (!plans) {
+      //   return res.status(400).json({ error: 'Invalid plan ID' });
+      // }
+
+      if (memberShipID) {
+        // Check if the 'memberShipID' already exists in the database
+        const existingUser = await User.findOne({ memberShipID });
+      
+        if (existingUser) {
+          return res.status(400).json({ error: 'memberShipID must be unique' });
+        }
+      }
+      if (contact1) {
+        // Check if the 'memberShipID' already exists in the database
+        const existingUser = await User.findOne({ contact1 });
+      
+        if (existingUser) {
+          return res.status(400).json({ error: 'Contact must be unique' });
+        }
+      }
+      if (plan) {
+        // Check if the 'memberShipID' already exists in the database
+        const existingPlan = await Plan.findOne({ plan });
+      
+        if (!existingPlan) {
+          return res.status(400).json({ error: `Plan ${plan} dont exist, please validate` });
+        }
+      }
+
+      // Remove commas from contact1 and contact2 and parse them as numbers
+      const parsedContact1 = parseFloat(contact1.replace(/,/g, ''));
+      const parsedContact2 = parseFloat(contact2.replace(/,/g, ''));
+
+      // Check if any required field is empty
+      const requiredFields = [
+        dob,
+        idNumber,
+        idType,
+        address,
+        contact1,
+        contact2,
+        email,
+        enrolmentDate,
+        memberShipID,
+        firstName,
+        manager,
+        gender,
+        lastName,
+        monthlyFee,
+        plan,
+        company,
+      ];
+
+      const emptyFields = requiredFields.filter((field, fieldIndex) => {
+        if (!field) {
+          console.log(`Validation Error: Field at line ${index}, column ${fieldIndex} cannot be null`);
+          return true;
+        }
+        return false;
+      });
+    
+      if (emptyFields.length > 0) {
+        throw new Error('Fields cannot be null');
+      }
+
+      if (requiredFields.some((field) => !field)) {
+        console.log('Validation Error: Fields cannot be null');
+        throw new Error('Fields cannot be null');
+      }
+
+      // Check if numeric fields are valid numbers
+      if (isNaN(parsedContact1) || isNaN(parsedContact2) || isNaN(monthlyFee)) {
+        console.log('Validation Error: Validate all fields');
+        throw new Error('Validate all fields');
+      }
+
+      // Create an object with user data
+      const user = {
+        dob,
+        idNumber,
+        idType,
+        address,
+        contact1: parsedContact1,
+        contact2: parsedContact2,
+        email,
+        enrolmentDate,
+        memberShipID,
+        firstName,
+        gender,
+        lastName,
+        manager,
+        monthlyFee,
+        plan,
+        relation: 'Main',
+        role: 4,
+        avatar: '', // You can set this to an empty string for now
+        company,
+        userType: 4,
+      };
+
+      users.push(user);
+    }
+
+    // Now, 'users' array contains user data from the CSV content
+    // You can loop through 'users' and create users in your database
+
+    console.log('Users:', users);
+
+    const createdUsers = await Promise.all(users.map(async (user) => {
+      // Use the same hashing logic as in your model's pre-save hook
+      let hashedPassword = user.password;
+      if (!hashedPassword) {
+        hashedPassword = await bcrypt.hash('mediplus', 10);
+      }
+
+      // Create the user in your database (similar to your existing code)
+      const customer = await User.create({
+        ...user,
+        password: hashedPassword,
+        user: req.user.id,
+      });
+
+      return customer;
+    }));
+
+    console.log('Created Users:', createdUsers);
+
+    res.status(201).json({
+      success: true,
+      customers: createdUsers,
+    });
+  } catch (error) {
+    console.error('Error:', error);
+
+    // Handle all errors consistently and send detailed error responses
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
 //update Company
 exports.editCorporatelUser = asyncHandler(async (req, res, next) => {
   const company = req.params.company;
