@@ -333,6 +333,81 @@ exports.userProfile = async (req, res, next) => {
 };
 
 
+exports.userServices = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id)
+      .sort({ createdAt: -1 })
+      .select("-password")
+      .populate({
+        path: "plan",
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+        },
+      });
+
+    if (user) {
+      let planService = user.plan && user.plan[0] ? user.plan[0].planService : [];
+
+      // Extract search parameters from the request query
+      const { serviceName, servicePrice, serviceDescription, serviceAreaOfCover } = req.query;
+
+      // Implement search based on provided parameters
+      if (serviceName) {
+        planService = planService.filter((service) =>
+          service.serviceName.toLowerCase().includes(serviceName.toLowerCase())
+        );
+      }
+
+      if (servicePrice) {
+        planService = planService.filter((service) =>
+          service.servicePrice === Number(servicePrice)
+        );
+      }
+
+      if (serviceDescription) {
+        planService = planService.filter((service) =>
+          service.serviceDescription.toLowerCase().includes(serviceDescription.toLowerCase())
+        );
+      }
+
+      if (serviceAreaOfCover) {
+        planService = planService.filter((service) =>
+          service.serviceAreaOfCover.toLowerCase().includes(serviceAreaOfCover.toLowerCase())
+        );
+      }
+
+      // Implement pagination
+      const pageSize = Number(req.query.pageSize) || 12;
+      const page = Number(req.query.pageNumber) || 1;
+      const startIndex = (page - 1) * pageSize;
+      const endIndex = page * pageSize;
+
+      const totalServices = planService.length;
+
+      planService = planService.slice(startIndex, endIndex);
+
+      res.status(200).json({
+        success: true,
+        planService,
+        totalServices,
+        pageSize,
+        currentPage: page,
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        error: "User not found",
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+
+
 // Initiate password reset
 exports.forgotPassword = async (req, res, next) => {
   const { email } = req.body;

@@ -204,6 +204,69 @@ exports.getAllCompany = async (req, res, next) => {
   }
 };
 
+//Get all manager companies
+exports.getAllManagerCompany = async (req, res, next) => {
+  // Enable search
+  const managerId = req.user.id;
+  const searchTerm = req.query.searchTerm;
+  const accountManagerSearch = req.query.accountManager;
+
+  const keyword = {
+    manager: managerId, // Filter by managerId
+  };
+
+  if (searchTerm || accountManagerSearch) {
+    keyword.$or = [];
+
+    if (searchTerm) {
+      keyword.$or.push({
+        companyName: {
+          $regex: searchTerm,
+          $options: "i",
+        },
+      });
+    }
+
+    if (accountManagerSearch) {
+      keyword.$or.push({
+        accountManager: {
+          $regex: accountManagerSearch,
+          $options: "i",
+        },
+      });
+    }
+  }
+
+  // Enable pagination
+  const pageSize = 10;
+  const page = Number(req.query.pageNumber) || 1;
+
+  try {
+    // Fetch the companies with pagination and population
+    const companies = await Company.find(keyword)
+      .populate("plan")
+      .populate("manager")
+      .sort({ createdAt: -1 })
+      .skip(pageSize * (page - 1))
+      .limit(pageSize);
+
+    // Get the total count of documents with the applied keyword filter
+    const count = await Company.countDocuments(keyword);
+
+    res.status(200).json({
+      success: true,
+      page,
+      companies,
+      pages: Math.ceil(count / pageSize),
+      count,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+
 //delete plan
 exports.deleteCompany = asyncHandler(async (req, res, next) => {
   try {
@@ -225,6 +288,104 @@ exports.deleteCompany = asyncHandler(async (req, res, next) => {
 //quero entrar na tabela de usuarios, e estrair todos os usuarios que tem o id da empresa
 //irei receber esse id por parametro
 
+exports.getThisCompanyUsers1 = asyncHandler(async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const logedUser = req.user.id;
+
+    const companies = await Company.find({id})
+
+    if (companies.manager !== logedUser) {
+      return next(new ErrorResponse("Only company manager can access this acount", 400));
+    }
+
+    // Enable search
+    const searchTerm = req.query.searchTerm;
+    const accountManagerSearch = req.query.accountManager;
+
+    const keyword = { company: id };
+    if (searchTerm || accountManagerSearch) {
+      keyword["$or"] = [];
+
+      if (searchTerm) {
+        keyword["$or"].push({
+          firstName: {
+            $regex: searchTerm,
+            $options: "i",
+          },
+        });
+        keyword["$or"].push({
+          lastName: {
+            $regex: searchTerm,
+            $options: "i",
+          },
+        });
+        keyword["$or"].push({
+          email: {
+            $regex: searchTerm,
+            $options: "i",
+          },
+        });
+      }
+
+      if (accountManagerSearch) {
+        keyword["$or"].push({
+          "manager.firstName": {
+            $regex: accountManagerSearch,
+            $options: "i",
+          },
+        });
+        keyword["$or"].push({
+          "manager.lastName": {
+            $regex: accountManagerSearch,
+            $options: "i",
+          },
+        });
+      }
+    }
+
+    // Enable pagination
+    const pageSize = 10;
+    const page = Number(req.query.pageNumber) || 1;
+
+    const allUsers = await User.find(keyword)
+      .populate({
+        path: "plan",
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+        },
+      })
+      .populate({
+        path: "manager",
+        populate: {
+          path: "manager",
+          model: "User",
+        },
+      })
+      .populate({ path: "user", select: "firstName lastName email" })
+      .sort({ createdAt: -1 })
+      .skip(pageSize * (page - 1))
+      .limit(pageSize);
+
+    // Get the total count of documents with the applied keyword filter
+    const count = await User.countDocuments(keyword);
+
+    res.status(200).json({
+      success: true,
+      page,
+      allUsers,
+      pages: Math.ceil(count / pageSize),
+      count,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+
+
+// Route to get users of a specific company (accessible only to the company manager)
 exports.getThisCompanyUsers = asyncHandler(async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -312,3 +473,6 @@ exports.getThisCompanyUsers = asyncHandler(async (req, res, next) => {
     next(error);
   }
 });
+
+// Apply the middleware to the route
+// router.get("/:id/users", isCompanyManager, exports.getThisCompanyUsers);

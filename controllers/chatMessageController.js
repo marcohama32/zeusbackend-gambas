@@ -3,11 +3,14 @@ const asyncHandler = require("../middleware/asyncHandler");
 const userSocketMap = require("../utils/userSocketMap");
 
 exports.saveChatMessage = asyncHandler(async (req, res) => {
-  const { text, senderAvatar, receiverAvatar, receiverName, receiverId } = req.body;
+  const { text, receiverAvatar, receiverName, receiverId } = req.body;
 
+  console.log("body: ", req.body)
   const senderId = req.user.id;
   const senderName = req.user.firstName;
 
+  const senderAvatar = req.file?.path;
+console.log("avatar", senderAvatar)
   const newChatMessage = new ChatMessage({
     text,
     senderId,
@@ -17,6 +20,7 @@ exports.saveChatMessage = asyncHandler(async (req, res) => {
     receiverId,
     receiverName,
   });
+
 
   try {
     const savedMessage = await newChatMessage.save();

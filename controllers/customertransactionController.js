@@ -560,19 +560,19 @@ exports.getAllTransactions = asyncHandler(async (req, res, next) => {
       ];
     }
 
-   // Add date range criteria if both startDate and endDate are provided
-   if (startDateParam && endDateParam) {
-    const startDate = new Date(startDateParam);
-    const endDate = new Date(endDateParam);
+    // Add date range criteria if both startDate and endDate are provided
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam);
+      const endDate = new Date(endDateParam);
 
-    if (!isNaN(startDate) && !isNaN(endDate)) {
-      // Only add date range criteria if startDate and endDate are valid dates
-      query.createdAt = {
-        $gte: startDate,
-        $lte: endDate,
-      };
+      if (!isNaN(startDate) && !isNaN(endDate)) {
+        // Only add date range criteria if startDate and endDate are valid dates
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
     }
-  }
 
     // Calculate the total count of transactions matching the query
     const totalCount = await Transaction.countDocuments(query);
@@ -591,7 +591,7 @@ exports.getAllTransactions = asyncHandler(async (req, res, next) => {
           select: "partnerName email contact1 contact2 avatar status",
         },
       })
-      .populate("customerId", "firstName lastName email") // Populate user information
+      .populate("customerId", "firstName lastName email manager agent") // Populate user information
       .populate({
         path: "planId",
         select: "planName", // Select the fields you want to include from the plan document
@@ -628,7 +628,7 @@ exports.getAllTransactionsInProgress = asyncHandler(async (req, res, next) => {
     const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
 
     // Create the query object
-    const query = {transactionStatus: "In progress"};
+    const query = { transactionStatus: "In progress" };
 
     // Add search criteria if searchTerm is provided
     if (searchTerm) {
@@ -653,19 +653,19 @@ exports.getAllTransactionsInProgress = asyncHandler(async (req, res, next) => {
       ];
     }
 
-   // Add date range criteria if both startDate and endDate are provided
-   if (startDateParam && endDateParam) {
-    const startDate = new Date(startDateParam);
-    const endDate = new Date(endDateParam);
+    // Add date range criteria if both startDate and endDate are provided
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam);
+      const endDate = new Date(endDateParam);
 
-    if (!isNaN(startDate) && !isNaN(endDate)) {
-      // Only add date range criteria if startDate and endDate are valid dates
-      query.createdAt = {
-        $gte: startDate,
-        $lte: endDate,
-      };
+      if (!isNaN(startDate) && !isNaN(endDate)) {
+        // Only add date range criteria if startDate and endDate are valid dates
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
     }
-  }
 
     // Calculate the total count of transactions matching the query
     const totalCount = await Transaction.countDocuments(query);
@@ -721,7 +721,7 @@ exports.getAllTransactionsPending = asyncHandler(async (req, res, next) => {
     const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
 
     // Create the query object
-    const query = {transactionStatus: "Pending"};
+    const query = { transactionStatus: "Pending" };
 
     // Add search criteria if searchTerm is provided
     if (searchTerm) {
@@ -746,19 +746,19 @@ exports.getAllTransactionsPending = asyncHandler(async (req, res, next) => {
       ];
     }
 
-   // Add date range criteria if both startDate and endDate are provided
-   if (startDateParam && endDateParam) {
-    const startDate = new Date(startDateParam);
-    const endDate = new Date(endDateParam);
+    // Add date range criteria if both startDate and endDate are provided
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam);
+      const endDate = new Date(endDateParam);
 
-    if (!isNaN(startDate) && !isNaN(endDate)) {
-      // Only add date range criteria if startDate and endDate are valid dates
-      query.createdAt = {
-        $gte: startDate,
-        $lte: endDate,
-      };
+      if (!isNaN(startDate) && !isNaN(endDate)) {
+        // Only add date range criteria if startDate and endDate are valid dates
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
     }
-  }
 
     // Calculate the total count of transactions matching the query
     const totalCount = await Transaction.countDocuments(query);
@@ -814,7 +814,7 @@ exports.getAllTransactionsAproved = asyncHandler(async (req, res, next) => {
     const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
 
     // Create the query object
-    const query = {transactionStatus: "Aproved"};
+    const query = { transactionStatus: "Aproved" };
 
     // Add search criteria if searchTerm is provided
     if (searchTerm) {
@@ -839,19 +839,19 @@ exports.getAllTransactionsAproved = asyncHandler(async (req, res, next) => {
       ];
     }
 
-   // Add date range criteria if both startDate and endDate are provided
-   if (startDateParam && endDateParam) {
-    const startDate = new Date(startDateParam);
-    const endDate = new Date(endDateParam);
+    // Add date range criteria if both startDate and endDate are provided
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam);
+      const endDate = new Date(endDateParam);
 
-    if (!isNaN(startDate) && !isNaN(endDate)) {
-      // Only add date range criteria if startDate and endDate are valid dates
-      query.createdAt = {
-        $gte: startDate,
-        $lte: endDate,
-      };
+      if (!isNaN(startDate) && !isNaN(endDate)) {
+        // Only add date range criteria if startDate and endDate are valid dates
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
     }
-  }
 
     // Calculate the total count of transactions matching the query
     const totalCount = await Transaction.countDocuments(query);
@@ -907,7 +907,7 @@ exports.getAllTransactionsCompleted = asyncHandler(async (req, res, next) => {
     const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
 
     // Create the query object
-    const query = {transactionStatus: "Completed"};
+    const query = { transactionStatus: "Completed" };
 
     // Add search criteria if searchTerm is provided
     if (searchTerm) {
@@ -932,19 +932,19 @@ exports.getAllTransactionsCompleted = asyncHandler(async (req, res, next) => {
       ];
     }
 
-   // Add date range criteria if both startDate and endDate are provided
-   if (startDateParam && endDateParam) {
-    const startDate = new Date(startDateParam);
-    const endDate = new Date(endDateParam);
+    // Add date range criteria if both startDate and endDate are provided
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam);
+      const endDate = new Date(endDateParam);
 
-    if (!isNaN(startDate) && !isNaN(endDate)) {
-      // Only add date range criteria if startDate and endDate are valid dates
-      query.createdAt = {
-        $gte: startDate,
-        $lte: endDate,
-      };
+      if (!isNaN(startDate) && !isNaN(endDate)) {
+        // Only add date range criteria if startDate and endDate are valid dates
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
     }
-  }
 
     // Calculate the total count of transactions matching the query
     const totalCount = await Transaction.countDocuments(query);
@@ -1000,7 +1000,7 @@ exports.getAllTransactionsCanceled = asyncHandler(async (req, res, next) => {
     const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
 
     // Create the query object
-    const query = {transactionStatus: "Canceled"};
+    const query = { transactionStatus: "Canceled" };
 
     // Add search criteria if searchTerm is provided
     if (searchTerm) {
@@ -1025,19 +1025,19 @@ exports.getAllTransactionsCanceled = asyncHandler(async (req, res, next) => {
       ];
     }
 
-   // Add date range criteria if both startDate and endDate are provided
-   if (startDateParam && endDateParam) {
-    const startDate = new Date(startDateParam);
-    const endDate = new Date(endDateParam);
+    // Add date range criteria if both startDate and endDate are provided
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam);
+      const endDate = new Date(endDateParam);
 
-    if (!isNaN(startDate) && !isNaN(endDate)) {
-      // Only add date range criteria if startDate and endDate are valid dates
-      query.createdAt = {
-        $gte: startDate,
-        $lte: endDate,
-      };
+      if (!isNaN(startDate) && !isNaN(endDate)) {
+        // Only add date range criteria if startDate and endDate are valid dates
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
     }
-  }
 
     // Calculate the total count of transactions matching the query
     const totalCount = await Transaction.countDocuments(query);
@@ -1081,7 +1081,6 @@ exports.getAllTransactionsCanceled = asyncHandler(async (req, res, next) => {
   }
 });
 
-
 // get all transactions in Revoked status
 exports.getAllTransactionsRevoked = asyncHandler(async (req, res, next) => {
   try {
@@ -1094,7 +1093,7 @@ exports.getAllTransactionsRevoked = asyncHandler(async (req, res, next) => {
     const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
 
     // Create the query object
-    const query = {transactionStatus: "Revoked"};
+    const query = { transactionStatus: "Revoked" };
 
     // Add search criteria if searchTerm is provided
     if (searchTerm) {
@@ -1119,19 +1118,19 @@ exports.getAllTransactionsRevoked = asyncHandler(async (req, res, next) => {
       ];
     }
 
-   // Add date range criteria if both startDate and endDate are provided
-   if (startDateParam && endDateParam) {
-    const startDate = new Date(startDateParam);
-    const endDate = new Date(endDateParam);
+    // Add date range criteria if both startDate and endDate are provided
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam);
+      const endDate = new Date(endDateParam);
 
-    if (!isNaN(startDate) && !isNaN(endDate)) {
-      // Only add date range criteria if startDate and endDate are valid dates
-      query.createdAt = {
-        $gte: startDate,
-        $lte: endDate,
-      };
+      if (!isNaN(startDate) && !isNaN(endDate)) {
+        // Only add date range criteria if startDate and endDate are valid dates
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
     }
-  }
 
     // Calculate the total count of transactions matching the query
     const totalCount = await Transaction.countDocuments(query);
@@ -1188,9 +1187,9 @@ exports.getTransactionsByCustomerId = asyncHandler(async (req, res, next) => {
         .json({ success: false, error: "Invalid customerId" });
     }
 
-     // Parse the date range parameters from the request query
-     const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
-     const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
+    // Parse the date range parameters from the request query
+    const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+    const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
 
     // Create the query object
     const query = { customerId };
@@ -2109,9 +2108,9 @@ exports.getMyTransactions = asyncHandler(async (req, res, next) => {
     // Parse the search term from the request query
     const searchTerm = req.query.searchTerm;
 
-   // Parse the date range parameters from the request query
-   const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
-   const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
+    // Parse the date range parameters from the request query
+    const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+    const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
 
     // Create the query object
     const query = { user: req.user.id };
@@ -3286,7 +3285,7 @@ exports.generateInvoicePDF = asyncHandler(async (req, res, next) => {
     });
 
     page.drawText("Taxes included", {
-      x: width- textWidth - 50,
+      x: width - textWidth - 50,
       y: height - 450,
       size: 11,
       color: fontColor,
@@ -3559,7 +3558,7 @@ exports.generateMobileInvoicePDF = asyncHandler(async (req, res, next) => {
     });
 
     page.drawText("Taxes included", {
-      x: width- textWidth - 50,
+      x: width - textWidth - 50,
       y: height - 450,
       size: 11,
       color: fontColor,
@@ -3582,6 +3581,118 @@ exports.generateMobileInvoicePDF = asyncHandler(async (req, res, next) => {
     next(error);
   }
 });
+
+// Modified code to access transactions associated with the manager
+exports.getLogedManagerTransactions = asyncHandler(async (req, res, next) => {
+  let pageSize = Number(req.query.pageSize) || 10;
+  let page = Number(req.query.pageNumber) || 1;
+  const searchTerm = req.query.searchTerm;
+  const managerId = req.user.id;
+
+   // Parse the date range parameters from the request query
+   const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+   const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
+
+
+  // Validate pageSize and pageNumber
+  if (pageSize <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageSize. Must be greater than 0",
+    });
+  }
+
+  if (page <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageNumber. Must be greater than 0",
+    });
+  }
+
+  try {
+    // Step 1: Find customers associated with the manager
+    const customerQuery = {
+      'manager': managerId,
+    };
+
+
+    const customerIds = await User.find(customerQuery).distinct('_id');
+
+
+    // Step 2: Find transactions for the customers
+    let transactionQuery = {
+      'customerId': { $in: customerIds },
+    };
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      transactionQuery.$or = [
+        { customerName: { $regex: searchTerm, $options: "i" } },
+        { "customerId.lastName": { $regex: searchTerm, $options: "i" } },
+        { invoiceNumber: { $regex: searchTerm, $options: "i" } },
+        { transactionStatus: { $regex: searchTerm, $options: "i" } },
+        { "planId.planName": { $regex: searchTerm, $options: "i" } },
+        {
+          "serviceIds.serviceName": { $regex: searchTerm, $options: "i" },
+        },
+      ];
+    }
+
+     // Add date range criteria if both startDate and endDate are provided
+if (startDateParam && endDateParam) {
+  const startDate = new Date(startDateParam);
+  const endDate = new Date(endDateParam);
+
+  if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
+    // Only add date range criteria if startDate and endDate are valid dates
+    transactionQuery.createdAt = {
+      $gte: startDate,
+      $lte: endDate,
+    };
+  }
+}
+
+    const totalCount = await Transaction.countDocuments(transactionQuery);
+
+    const transactions = await Transaction.find(transactionQuery)
+      .sort({ createdAt: -1 })
+      .skip(pageSize * (page - 1))
+      .limit(pageSize)
+      .populate({
+        path: "user",
+        select: "firstName lastName email profile",
+        populate: {
+          path: "partnerUser",
+          model: "Partner",
+          select: "partnerName email contact1 contact2 avatar status",
+        },
+      })
+      .populate("customerId", "firstName lastName email manager agent") // Populate user information
+      .populate({
+        path: "planId",
+        select: "planName", // Select the fields you want to include from the plan document
+        populate: {
+          path: "planService",
+          model: "PlanServices",
+          select: "serviceName servicePrice", // Select the fields you want to include from the planService document
+        },
+      })
+      .populate("serviceIds", "serviceName servicePrice"); // Populate service information
+
+    res.status(200).json({
+      success: true,
+      transactions,
+      page,
+      pages: Math.ceil(totalCount / pageSize),
+      count: totalCount,
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+
+
 
 exports.ussd = asyncHandler(async (req, res, next) => {
   const phoneNumber1 = "";

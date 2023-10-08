@@ -1,6 +1,7 @@
 const CustomerRequest = require("../models/customerRequest");
 const asyncHandler = require("../middleware/asyncHandler");
 const ErrorResponse = require("../utils/errorResponse");
+const User = require("../models/userModel");
 
 // Create a customer request with status history and changedBy reference
 exports.createCustomerRequest = asyncHandler(async (req, res, next) => {
@@ -109,7 +110,7 @@ exports.findCustomerRequestById = asyncHandler(async (req, res, next) => {
     const customerRequest = await CustomerRequest.findById(id).populate({
       path: "statusHistory.changedBy",
       select: "firstName lastName email avatar",
-    })
+    });
 
     if (!customerRequest) {
       return res.status(404).json({ message: "Customer request not found" });
@@ -130,12 +131,15 @@ exports.getAllCustomerRequests = asyncHandler(async (req, res, next) => {
     const pageSize = Number(req.query.pageSize) || 10;
     const page = Number(req.query.pageNumber) || 1;
     const searchTerm = req.query.searchTerm;
-
+    // Parse the date range parameters from the request query
+    const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+    const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
     // Create the query object
     const query = {};
 
     // Add search criteria if searchTerm is provided
     if (searchTerm) {
+      query["customer.firstName"] = { $regex: searchTerm, $options: "i" };
       query.$or = [
         { title: { $regex: searchTerm, $options: "i" } },
         { comment: { $regex: searchTerm, $options: "i" } },
@@ -143,11 +147,30 @@ exports.getAllCustomerRequests = asyncHandler(async (req, res, next) => {
       ];
     }
 
+    // Add date range criteria if both startDate and endDate are provided
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam);
+      const endDate = new Date(endDateParam);
+
+      if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
+        // Only add date range criteria if startDate and endDate are valid dates
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
+    }
+
     // Calculate the total count of customer requests matching the query
     const totalCount = await CustomerRequest.countDocuments(query);
 
     // Find customer requests with pagination
     const customerRequests = await CustomerRequest.find(query)
+      .sort({ createdAt: -1 })
+      .populate({
+        path: "customer",
+        select: "firstName lastName email",
+      })
       .skip(pageSize * (page - 1))
       .limit(pageSize);
 
@@ -200,6 +223,7 @@ exports.getCustomerRequestsByUser = asyncHandler(async (req, res, next) => {
 
     // Find customer requests for the logged-in user with pagination
     const customerRequests = await CustomerRequest.find(query)
+      .sort({ createdAt: -1 })
       .skip(pageSize * (page - 1))
       .limit(pageSize);
 
@@ -267,3 +291,89 @@ const updateRequestStatus = async (requestId, newStatus, changedBy) => {
     throw error;
   }
 };
+
+// get request from the loged manager
+exports.getLogedManagerRequests = asyncHandler(async (req, res, next) => {
+  let pageSize = Number(req.query.pageSize) || 10;
+  let page = Number(req.query.pageNumber) || 1;
+  const searchTerm = req.query.searchTerm;
+  const managerId = req.user.id;
+
+  // Parse the date range parameters from the request query
+  const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+  const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
+
+  // Validate pageSize and pageNumber
+  if (pageSize <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageSize. Must be greater than 0",
+    });
+  }
+
+  if (page <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageNumber. Must be greater than 0",
+    });
+  }
+
+  try {
+    // Step 1: Find customers associated with the manager
+    const customerQuery = {
+      manager: managerId,
+    };
+
+    const customerIds = await User.find(customerQuery).distinct("_id");
+
+    // Step 2: Find transactions for the customers
+    let requestQuery = {
+      customer: { $in: customerIds },
+    };
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      requestQuery.$or = [
+        { title: { $regex: searchTerm, $options: "i" } },
+        { "customerId.lastName": { $regex: searchTerm, $options: "i" } },
+        { status: { $regex: searchTerm, $options: "i" } },
+        { comment: { $regex: searchTerm, $options: "i" } },
+      ];
+    }
+
+    // Add date range criteria if both startDate and endDate are provided
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam);
+      const endDate = new Date(endDateParam);
+
+      if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
+        // Only add date range criteria if startDate and endDate are valid dates
+        requestQuery.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
+    }
+
+    const totalCount = await CustomerRequest.countDocuments(requestQuery);
+
+    const customerRequests = await CustomerRequest.find(requestQuery)
+      .sort({ createdAt: -1 })
+      .skip(pageSize * (page - 1))
+      .limit(pageSize)
+
+      .populate("customer", "firstName lastName email"); // Populate service information
+
+    res.status(200).json({
+      success: true,
+      count: customerRequests.length,
+      page,
+      pageSize,
+      pages: Math.ceil(totalCount / pageSize),
+      total: totalCount,
+      customerRequests,
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
