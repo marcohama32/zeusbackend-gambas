@@ -82,7 +82,7 @@ exports.createServiceForPlan = asyncHandler(async (req, res, next) => {
 //find plan by id
 exports.singleService = asyncHandler(async (req, res, next) => {
   try {
-    const service = await Service.findById(req.params.service_id)
+    const service = await PlanService.findById(req.params.service_id)
       
 
     if (!service) {
