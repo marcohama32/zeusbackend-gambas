@@ -288,7 +288,6 @@ exports.editIndividualUser = asyncHandler(async (req, res, next) => {
   });
 });
 
-
 exports.getAllIndividualCustomer = async (req, res, next) => {
   let pageSize = Number(req.query.pageSize) || 10;
   let page = Number(req.query.pageNumber) || 1;
@@ -296,7 +295,7 @@ exports.getAllIndividualCustomer = async (req, res, next) => {
   // Parse the date range parameters from the request query
   const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
   const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
-  
+
   // Validate pageSize and pageNumber
   if (pageSize <= 0) {
     return res.status(400).json({
@@ -720,7 +719,11 @@ exports.getAllIndividualCustomerManagerByLogedManager = async (
 };
 
 // get All Individual Customer Manager By Loged Manager our Agent  const managerId = req.user.id;
-exports.getAllCorporateCustomerManagerByLogedManager = async (req,res,next) => {
+exports.getAllCorporateCustomerManagerByLogedManager = async (
+  req,
+  res,
+  next
+) => {
   const managerId = req.user.id; // Get managerId from the route parameter
   let pageSize = Number(req.query.pageSize) || 10;
   let page = Number(req.query.pageNumber) || 1;
@@ -1037,7 +1040,11 @@ exports.getAllIndividualCorporateCustomerManagerByManagerID = async (
 
 // brings all customers from a loged manager
 // Bring all customers from a logged manager including both manager and line manager
-exports.getAllIndividualCorporateCustomerByLogedManager1 = async (req, res, next) => {
+exports.getAllIndividualCorporateCustomerByLogedManager1 = async (
+  req,
+  res,
+  next
+) => {
   try {
     const managerId = req.user.id;
     const pageSize = Number(req.query.pageSize) || 10;
@@ -1055,7 +1062,12 @@ exports.getAllIndividualCorporateCustomerByLogedManager1 = async (req, res, next
     const baseQuery = {
       $and: [
         {
-          $or: [{ userType: 4 }, { userType: 7 }, { userType: 5 }, { userType: 8 }],
+          $or: [
+            { userType: 4 },
+            { userType: 7 },
+            { userType: 5 },
+            { userType: 8 },
+          ],
         },
         {
           $or: [{ manager: managerId }],
@@ -1129,8 +1141,12 @@ exports.getAllIndividualCorporateCustomerByLogedManager1 = async (req, res, next
   }
 };
 
-exports.getAllIndividualCorporateCustomerByLogedManager = async (req, res, next) => {
-  console.log("Here");
+exports.getAllIndividualCorporateCustomerByLogedManager = async (
+  req,
+  res,
+  next
+) => {
+  console.log("Gingaligando");
   const managerId = req.user.id; // Get managerId from the route parameter
   let pageSize = Number(req.query.pageSize) || 10;
   let page = Number(req.query.pageNumber) || 1;
@@ -1152,15 +1168,10 @@ exports.getAllIndividualCorporateCustomerByLogedManager = async (req, res, next)
   }
 
   try {
-    let query = {
-      $and: [
-        { $or: [{ userType: 4 }, { userType: 7 }, { userType: 5 }, { userType: 8 }] },
-        {
-          $or: [
-            { manager: managerId }, // Users with the specified manager
-          ],
-        },
-      ],
+    // Construct the query
+    const query = {
+      manager: managerId,
+      userType: { $in: [4, 7, 5, 8] }, // Filter by user types 4, 7, 5, 8
     };
 
     // Add search criteria if searchTerm is provided
@@ -1241,7 +1252,110 @@ exports.getAllIndividualCorporateCustomerByLogedManager = async (req, res, next)
   }
 };
 
+exports.getAllIndividualCorporateCustomerByLogedManagerChat = async (
+  req,
+  res,
+  next
+) => {
+  console.log("Chat Gingaligando");
+  const managerId = req.user.id; // Get managerId from the route parameter
+  let pageSize = Number(req.query.pageSize) || 10000;
+  let page = Number(req.query.pageNumber) || 1;
+  const searchTerm = req.query.searchTerm;
 
+  // Validate pageSize and pageNumber
+  if (pageSize <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageSize. Must be greater than 0",
+    });
+  }
+
+  if (page <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageNumber. Must be greater than 0",
+    });
+  }
+
+  try {
+    // Construct the query
+    const query = {
+      manager: managerId,
+      userType: { $in: [4, 7, 5, 8] }, // Filter by user types 4, 7, 5, 8
+    };
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      query.$and.push({
+        $or: [
+          { firstName: { $regex: searchTerm, $options: "i" } },
+          { lastName: { $regex: searchTerm, $options: "i" } },
+          { idNumber: { $regex: searchTerm, $options: "i" } },
+          { contact1: { $regex: searchTerm, $options: "i" } },
+          { contact2: { $regex: searchTerm, $options: "i" } },
+          { memberShipID: { $regex: searchTerm, $options: "i" } },
+          { relation: { $regex: searchTerm, $options: "i" } },
+        ],
+      });
+    }
+
+    const count = await User.countDocuments(query);
+
+    console.log("here you query:", query);
+    const users = await User.find(query)
+      .sort({ createdAt: -1 })
+      .select("-password")
+      .populate({
+        path: "accountOwner",
+        populate: {
+          path: "manager",
+          select: "firstName lastName email",
+        },
+      });
+    // console.log("here all users: ", users2);
+
+    // const users2 = await User.find(query)
+    //   .sort({ createdAt: -1 })
+    //   .select("-password")
+    //   .populate({
+    //     path: "accountOwner",
+    //     populate: {
+    //       path: "manager",
+    //       select: "firstName lastName email",
+    //     },
+    //   })
+    //   .populate({
+    //     path: "plan",
+    //     populate: {
+    //       path: "planService",
+    //       model: "PlanServices",
+    //     },
+    //   })
+    //   .populate({
+    //     path: "manager",
+    //     select: "firstName lastName email",
+    //     populate: {
+    //       path: "lineManager",
+    //       model: "User",
+    //       select: "firstName lastName email",
+    //     },
+    //   })
+    //   .populate("myMembers")
+    //   .skip(pageSize * (page - 1))
+    //   .limit(pageSize);
+
+    res.status(200).json({
+      success: true,
+      users,
+      page,
+      pages: Math.ceil(count / pageSize),
+      count,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
 
 // ----------------------------------------------Agent-----------------------------------------------
 

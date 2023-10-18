@@ -73,7 +73,7 @@ app.use("/api", chatMessageRoutes);
 app.use("/api", FilesTemplateRoutes);
 app.use("/api", CustomerRequestRoutes);
 app.use("/api", ussdRoutes);
-app.use("/api", Dashboard)
+app.use("/api", Dashboard);
 
 app.use(notFound);
 app.use(errorHandler);

@@ -7,7 +7,7 @@ const router = express.Router();
 const clients = [];
 
 // Route for SSE notifications
-router.get("/notifications", (req, res) => {
+router.get("/transactionnotifications", (req, res) => {
   // Set headers for SSE
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
