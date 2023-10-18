@@ -22,6 +22,7 @@ const {
   getAllCorporateCustomerManagerByLogedManager,
   getAllIndividualCorporateCustomerManagerByManagerID,
   getAllIndividualCorporateCustomerByLogedManager,
+  getAllIndividualCorporateCustomerByLogedManagerChat,
   uploadSingleFile,
   uploadMultipleFiles,
   deleteFile,
@@ -142,6 +143,13 @@ router.get(
   isAuthenticated,
   // isCompanyManager,
   getAllIndividualCorporateCustomerByLogedManager
+);
+
+router.get(
+  "/user/manager/allcustomersfromlogedmanagerchat",
+  isAuthenticated,
+  // isCompanyManager,
+  getAllIndividualCorporateCustomerByLogedManagerChat
 );
 // Example route using to upload sigle page  
 router.put(
