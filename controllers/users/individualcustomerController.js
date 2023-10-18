@@ -1241,6 +1241,110 @@ exports.getAllIndividualCorporateCustomerByLogedManager = async (req, res, next)
   }
 };
 
+exports.getAllIndividualCorporateCustomerByLogedManagerChat = async (
+  req,
+  res,
+  next
+) => {
+  console.log("Chat Gingaligando");
+  const managerId = req.user.id; // Get managerId from the route parameter
+  let pageSize = Number(req.query.pageSize) || 10000;
+  let page = Number(req.query.pageNumber) || 1;
+  const searchTerm = req.query.searchTerm;
+
+  // Validate pageSize and pageNumber
+  if (pageSize <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageSize. Must be greater than 0",
+    });
+  }
+
+  if (page <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid pageNumber. Must be greater than 0",
+    });
+  }
+
+  try {
+    // Construct the query
+    const query = {
+      manager: managerId,
+      userType: { $in: [4, 7, 5, 8] }, // Filter by user types 4, 7, 5, 8
+    };
+
+    // Add search criteria if searchTerm is provided
+    if (searchTerm) {
+      query.$and.push({
+        $or: [
+          { firstName: { $regex: searchTerm, $options: "i" } },
+          { lastName: { $regex: searchTerm, $options: "i" } },
+          { idNumber: { $regex: searchTerm, $options: "i" } },
+          { contact1: { $regex: searchTerm, $options: "i" } },
+          { contact2: { $regex: searchTerm, $options: "i" } },
+          { memberShipID: { $regex: searchTerm, $options: "i" } },
+          { relation: { $regex: searchTerm, $options: "i" } },
+        ],
+      });
+    }
+
+    const count = await User.countDocuments(query);
+
+    console.log("here you query:", query);
+    const users = await User.find(query)
+      .sort({ createdAt: -1 })
+      .select("-password")
+      .populate({
+        path: "accountOwner",
+        populate: {
+          path: "manager",
+          select: "firstName lastName email",
+        },
+      });
+    // console.log("here all users: ", users2);
+
+    // const users2 = await User.find(query)
+    //   .sort({ createdAt: -1 })
+    //   .select("-password")
+    //   .populate({
+    //     path: "accountOwner",
+    //     populate: {
+    //       path: "manager",
+    //       select: "firstName lastName email",
+    //     },
+    //   })
+    //   .populate({
+    //     path: "plan",
+    //     populate: {
+    //       path: "planService",
+    //       model: "PlanServices",
+    //     },
+    //   })
+    //   .populate({
+    //     path: "manager",
+    //     select: "firstName lastName email",
+    //     populate: {
+    //       path: "lineManager",
+    //       model: "User",
+    //       select: "firstName lastName email",
+    //     },
+    //   })
+    //   .populate("myMembers")
+    //   .skip(pageSize * (page - 1))
+    //   .limit(pageSize);
+
+    res.status(200).json({
+      success: true,
+      users,
+      page,
+      pages: Math.ceil(count / pageSize),
+      count,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
 
 
 // ----------------------------------------------Agent-----------------------------------------------
