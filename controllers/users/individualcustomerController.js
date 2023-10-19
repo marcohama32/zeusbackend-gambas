@@ -1246,7 +1246,7 @@ exports.getAllIndividualCorporateCustomerByLogedManagerChat = async (
   res,
   next
 ) => {
-  console.log("Chat Gingaligando");
+
   const managerId = req.user.id; // Get managerId from the route parameter
   let pageSize = Number(req.query.pageSize) || 10000;
   let page = Number(req.query.pageNumber) || 1;
@@ -1291,7 +1291,6 @@ exports.getAllIndividualCorporateCustomerByLogedManagerChat = async (
 
     const count = await User.countDocuments(query);
 
-    console.log("here you query:", query);
     const users = await User.find(query)
       .sort({ createdAt: -1 })
       .select("-password")
@@ -1302,37 +1301,6 @@ exports.getAllIndividualCorporateCustomerByLogedManagerChat = async (
           select: "firstName lastName email",
         },
       });
-    // console.log("here all users: ", users2);
-
-    // const users2 = await User.find(query)
-    //   .sort({ createdAt: -1 })
-    //   .select("-password")
-    //   .populate({
-    //     path: "accountOwner",
-    //     populate: {
-    //       path: "manager",
-    //       select: "firstName lastName email",
-    //     },
-    //   })
-    //   .populate({
-    //     path: "plan",
-    //     populate: {
-    //       path: "planService",
-    //       model: "PlanServices",
-    //     },
-    //   })
-    //   .populate({
-    //     path: "manager",
-    //     select: "firstName lastName email",
-    //     populate: {
-    //       path: "lineManager",
-    //       model: "User",
-    //       select: "firstName lastName email",
-    //     },
-    //   })
-    //   .populate("myMembers")
-    //   .skip(pageSize * (page - 1))
-    //   .limit(pageSize);
 
     res.status(200).json({
       success: true,
