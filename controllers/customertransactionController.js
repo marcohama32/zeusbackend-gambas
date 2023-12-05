@@ -3081,6 +3081,7 @@ exports.generateInvoicePDF = asyncHandler(async (req, res, next) => {
     const text2 = "Amount:";
     const textSize = 11;
     const fontColor = rgb(0, 0, 0);
+    // mediplus
     const mainFontColor = rgb(241 / 255, 95 / 255, 30 / 255);
 
     // Calculate the width based on font size and text length
@@ -3308,6 +3309,288 @@ exports.generateInvoicePDF = asyncHandler(async (req, res, next) => {
     next(error);
   }
 });
+
+exports.generateInvoicePDFBritam = asyncHandler(async (req, res, next) => {
+  try {
+    const transactionID = req.params.transactionID;
+
+    const transaction = await Transaction.findById(transactionID)
+      .populate("customerId")
+      .populate({
+        path: "user",
+        select: "firstName lastName email profile",
+        populate: {
+          path: "partnerUser",
+          model: "Partner",
+          select: "partnerName email contact1 contact2 avatar status",
+        },
+      })
+      .populate(
+        "serviceIds",
+        "serviceName serviceDescription serviceAreaOfCover"
+      );
+
+    if (!transaction) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Transaction not found" });
+    }
+
+    const formattedAmount = transaction.amount.toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD", // Change the currency code as needed
+      minimumFractionDigits: 2, // Adjust to control the number of decimal places
+    });
+
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([600, 600]);
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=invoice_${transaction._id}.pdf`
+    );
+    res.setHeader("Content-type", "application/pdf");
+
+    const text = "Payment to:";
+    const text2 = "Amount:";
+    const textSize = 11;
+    const fontColor = rgb(0, 0, 0);
+    // mediplus
+    // const mainFontColor = rgb(241 / 255, 95 / 255, 30 / 255);
+    const hexColor = "0078bf";
+    const red = parseInt(hexColor.substring(0, 2), 16) / 255;
+    const green = parseInt(hexColor.substring(2, 4), 16) / 255;
+    const blue = parseInt(hexColor.substring(4, 6), 16) / 255;
+
+    // Use the rgb() function from pdf-lib with normalized values
+    const mainFontColor = rgb(red, green, blue);
+
+    // Calculate the width based on font size and text length
+    const textWidth = textSize * text.length;
+
+    const logoImageBytes = fs.readFileSync("controllers/logo.png");
+    const logoImage = await pdfDoc.embedPng(logoImageBytes);
+
+    const { width, height } = page.getSize();
+
+    page.drawText("Invoice", {
+      x: 50,
+      y: height - 80,
+      size: 16,
+      color: mainFontColor,
+      font: await pdfDoc.embedFont("Helvetica-Bold"),
+      align: "center",
+    });
+
+    page.drawText(`Receipt: ${transaction.invoiceNumber}`, {
+      x: 50,
+      y: height - 100,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(`${transaction.updatedAt.toLocaleDateString()}`, {
+      x: 50,
+      y: height - 120,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText("Client Details:", {
+      x: 50,
+      y: height - 160,
+      size: 11,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica-Bold"),
+    });
+
+    page.drawText(`${transaction.customerName}`, {
+      x: 50,
+      y: height - 180,
+      size: 13,
+      color: mainFontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(`${transaction.customerId.email}`, {
+      x: 50,
+      y: height - 200,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(`${transaction.customerId.address}`, {
+      x: 50,
+      y: height - 220,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(
+      `${transaction.customerId.contact1} , ${transaction.customerId.contact2}`,
+      {
+        x: 50,
+        y: height - 240,
+        size: 10,
+        color: fontColor,
+        font: await pdfDoc.embedFont("Helvetica"),
+      }
+    );
+
+    page.drawText(text, {
+      x: width - textWidth - 50,
+      y: height - 160,
+      size: textSize,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica-Bold"),
+    });
+
+    page.drawText(`${transaction.user.partnerUser.partnerName}`, {
+      x: width - textWidth - 50,
+      y: height - 180,
+      size: 13,
+      color: mainFontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(`${transaction.user.partnerUser.email}`, {
+      x: width - textWidth - 50,
+      y: height - 200,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(
+      `${transaction.user.partnerUser.contact1} , ${transaction.user.partnerUser.contact2}`,
+      {
+        x: width - textWidth - 50,
+        y: height - 220,
+        size: 10,
+        color: fontColor,
+        font: await pdfDoc.embedFont("Helvetica"),
+      }
+    );
+
+    page.drawText("Service:", {
+      x: 50,
+      y: height - 300,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawLine({
+      start: { x: 50, y: height - 305 },
+      end: { x: 50 + 500, y: height - 305 },
+      thickness: 1,
+      color: fontColor,
+    });
+
+    page.drawText(`${transaction.serviceIds[0].serviceName}`, {
+      x: 50,
+      y: height - 320,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(`${transaction.serviceIds[0].serviceDescription}`, {
+      x: 50,
+      y: height - 340,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(`${transaction.serviceIds[0].serviceAreaOfCover}`, {
+      x: 50,
+      y: height - 360,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+    page.drawLine({
+      start: { x: 50, y: height - 370 },
+      end: { x: 50 + 500, y: height - 370 },
+      thickness: 1,
+      color: fontColor,
+    });
+
+    page.drawText("Processed by:", {
+      x: 50,
+      y: height - 410,
+      size: 10,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(
+      `${transaction.user.firstName} ${transaction.user.lastName}`,
+      {
+        x: 50,
+        y: height - 430,
+        size: 13,
+        color: mainFontColor,
+        font: await pdfDoc.embedFont("Helvetica"),
+      }
+    );
+    page.drawText(
+      `${transaction.user.partnerUser.contact1} , ${transaction.user.partnerUser.contact2}`,
+      {
+        x: 50,
+        y: height - 450,
+        size: 11,
+        color: fontColor,
+        font: await pdfDoc.embedFont("Helvetica"),
+      }
+    );
+
+    page.drawText(text2, {
+      x: width - textWidth - 50,
+      y: height - 410,
+      size: 11,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText(formattedAmount, {
+      x: width - textWidth - 50,
+      y: height - 430,
+      size: 10,
+      color: mainFontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    page.drawText("Taxes included", {
+      x: width - textWidth - 50,
+      y: height - 450,
+      size: 11,
+      color: fontColor,
+      font: await pdfDoc.embedFont("Helvetica"),
+    });
+
+    const pdfBytes = await pdfDoc.save();
+
+    const pdfStream = new stream.PassThrough();
+    pdfStream.end(pdfBytes);
+
+    pdfStream.on("data", (chunk) => {
+      res.write(chunk);
+    });
+
+    pdfStream.on("end", () => {
+      res.end();
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 
 exports.generateMobileInvoicePDF = asyncHandler(async (req, res, next) => {
   try {
@@ -3589,10 +3872,9 @@ exports.getLogedManagerTransactions = asyncHandler(async (req, res, next) => {
   const searchTerm = req.query.searchTerm;
   const managerId = req.user.id;
 
-   // Parse the date range parameters from the request query
-   const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
-   const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
-
+  // Parse the date range parameters from the request query
+  const startDateParam = req.query.startDate; // Format: YYYY-MM-DD
+  const endDateParam = req.query.endDate; // Format: YYYY-MM-DD
 
   // Validate pageSize and pageNumber
   if (pageSize <= 0) {
@@ -3612,16 +3894,14 @@ exports.getLogedManagerTransactions = asyncHandler(async (req, res, next) => {
   try {
     // Step 1: Find customers associated with the manager
     const customerQuery = {
-      'manager': managerId,
+      manager: managerId,
     };
 
-
-    const customerIds = await User.find(customerQuery).distinct('_id');
-
+    const customerIds = await User.find(customerQuery).distinct("_id");
 
     // Step 2: Find transactions for the customers
     let transactionQuery = {
-      'customerId': { $in: customerIds },
+      customerId: { $in: customerIds },
     };
 
     // Add search criteria if searchTerm is provided
@@ -3638,19 +3918,19 @@ exports.getLogedManagerTransactions = asyncHandler(async (req, res, next) => {
       ];
     }
 
-     // Add date range criteria if both startDate and endDate are provided
-if (startDateParam && endDateParam) {
-  const startDate = new Date(startDateParam);
-  const endDate = new Date(endDateParam);
+    // Add date range criteria if both startDate and endDate are provided
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam);
+      const endDate = new Date(endDateParam);
 
-  if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
-    // Only add date range criteria if startDate and endDate are valid dates
-    transactionQuery.createdAt = {
-      $gte: startDate,
-      $lte: endDate,
-    };
-  }
-}
+      if (!isNaN(startDate) && !isNaN(endDate) && startDate <= endDate) {
+        // Only add date range criteria if startDate and endDate are valid dates
+        transactionQuery.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
+    }
 
     const totalCount = await Transaction.countDocuments(transactionQuery);
 
@@ -3690,9 +3970,6 @@ if (startDateParam && endDateParam) {
     return next(error);
   }
 });
-
-
-
 
 exports.ussd = asyncHandler(async (req, res, next) => {
   const phoneNumber1 = "";
