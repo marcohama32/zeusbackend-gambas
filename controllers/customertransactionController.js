@@ -3081,7 +3081,7 @@ exports.generateInvoicePDF = asyncHandler(async (req, res, next) => {
     const text2 = "Amount:";
     const textSize = 11;
     const fontColor = rgb(0, 0, 0);
-    // mediplus
+    // mediplus colors
     const mainFontColor = rgb(241 / 255, 95 / 255, 30 / 255);
 
     // Calculate the width based on font size and text length
