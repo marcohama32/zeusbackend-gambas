@@ -19,6 +19,7 @@ const {
   getTransactionsFromCompany,
   cancelTransaction,
   generateInvoicePDF,
+  generateInvoicePDFBritam,
   generateMobileInvoicePDF,
   getAllTransactionsInProgress,
   getAllTransactionsPending,
@@ -179,6 +180,11 @@ router.get(
   "/get/customerinvoice/:transactionID",
   isAuthenticated,
   generateInvoicePDF
+);
+router.get(
+  "/get/britamcustomerinvoice/:transactionID",
+  isAuthenticated,
+  generateInvoicePDFBritam
 );
 router.get(
   "/get/mobilecustomerinvoice/:transactionID",
